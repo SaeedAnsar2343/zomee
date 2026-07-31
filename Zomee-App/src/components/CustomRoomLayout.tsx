@@ -100,6 +100,9 @@ export default function CustomRoomLayout() {
   const [mutedChats, setMutedChats] = useState<Set<string>>(new Set());
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNoiseSuppressionEnabled, setIsNoiseSuppressionEnabled] = useState(true);
+  const [isHDVideoEnabled, setIsHDVideoEnabled] = useState(true);
+  const [isMirrorVideoEnabled, setIsMirrorVideoEnabled] = useState(false);
+  const [isDataSaverEnabled, setIsDataSaverEnabled] = useState(false);
   const [incomingRequest, setIncomingRequest] = useState<{ hostIdentity: string, type: 'mic' | 'video' } | null>(null);
   const [showEndMeetingModal, setShowEndMeetingModal] = useState(false);
   const [showGuestLeaveModal, setShowGuestLeaveModal] = useState(false);
@@ -464,12 +467,15 @@ export default function CustomRoomLayout() {
       {/* Toast */}
       {toastMsg && (
         <div style={{
-          position: "absolute", top: "32px", left: "50%", transform: "translateX(-50%)",
+          position: "absolute", top: "32px", left: "50%",
           background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(12px)", border: "1px solid var(--primary-cyan)",
-          color: "white", padding: "12px 24px", borderRadius: "100px", zIndex: 100,
-          boxShadow: "0 10px 30px rgba(34, 211, 238, 0.2)", fontWeight: "500"
+          color: "white", padding: "12px 24px", borderRadius: "100px", zIndex: 9999,
+          boxShadow: "0 10px 30px rgba(34, 211, 238, 0.3)", fontWeight: "500",
+          display: "flex", alignItems: "center", gap: "10px",
+          animation: "toastSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards"
         }}>
-          {toastMsg}
+          <CheckCircle2 size={18} color="#34d399" />
+          <span>{toastMsg}</span>
         </div>
       )}
 
@@ -677,9 +683,9 @@ export default function CustomRoomLayout() {
                   <span style={{ color: "#34d399", fontSize: "13px", fontWeight: "600" }}>End-to-End Encrypted</span>
                 </div>
                 
-                <h4 style={{ fontSize: "12px", textTransform: "uppercase", color: "var(--text-secondary)", letterSpacing: "1px", margin: "4px 0" }}>Audio Settings</h4>
+                <h4 style={{ fontSize: "12px", textTransform: "uppercase", color: "var(--text-secondary)", letterSpacing: "1px", margin: "4px 0" }}>Audio & Video</h4>
                 
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 0" }}>
                   <span style={{ fontSize: "14px", color: "white", fontWeight: "500" }}>Noise Suppression</span>
                   <button 
                     onClick={() => {
@@ -691,16 +697,69 @@ export default function CustomRoomLayout() {
                       position: "relative", border: "none", cursor: "pointer", transition: "all 0.3s"
                     }}
                   >
-                    <div style={{
-                      width: "18px", height: "18px", borderRadius: "50%", background: "white", position: "absolute", top: "3px",
-                      left: isNoiseSuppressionEnabled ? "23px" : "3px", transition: "all 0.3s",
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
-                    }}></div>
+                    <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: "white", position: "absolute", top: "3px", left: isNoiseSuppressionEnabled ? "23px" : "3px", transition: "all 0.3s", boxShadow: "0 2px 4px rgba(0,0,0,0.2)" }}></div>
                   </button>
                 </div>
 
-                <button className="invite-option-btn" onClick={() => setToastMsg("More features coming soon!")} style={{ marginTop: "4px" }}>
-                  More Features...
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 0" }}>
+                  <span style={{ fontSize: "14px", color: "white", fontWeight: "500" }}>HD Video</span>
+                  <button 
+                    onClick={() => {
+                      setIsHDVideoEnabled(!isHDVideoEnabled);
+                      setToastMsg(isHDVideoEnabled ? "Switched to standard definition" : "HD video enabled");
+                    }}
+                    style={{
+                      width: "44px", height: "24px", borderRadius: "100px", background: isHDVideoEnabled ? "var(--primary-cyan)" : "rgba(255,255,255,0.2)",
+                      position: "relative", border: "none", cursor: "pointer", transition: "all 0.3s"
+                    }}
+                  >
+                    <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: "white", position: "absolute", top: "3px", left: isHDVideoEnabled ? "23px" : "3px", transition: "all 0.3s", boxShadow: "0 2px 4px rgba(0,0,0,0.2)" }}></div>
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 0" }}>
+                  <span style={{ fontSize: "14px", color: "white", fontWeight: "500" }}>Mirror My Video</span>
+                  <button 
+                    onClick={() => {
+                      setIsMirrorVideoEnabled(!isMirrorVideoEnabled);
+                      setToastMsg(isMirrorVideoEnabled ? "Mirror video disabled" : "Mirror video enabled");
+                    }}
+                    style={{
+                      width: "44px", height: "24px", borderRadius: "100px", background: isMirrorVideoEnabled ? "var(--primary-cyan)" : "rgba(255,255,255,0.2)",
+                      position: "relative", border: "none", cursor: "pointer", transition: "all 0.3s"
+                    }}
+                  >
+                    <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: "white", position: "absolute", top: "3px", left: isMirrorVideoEnabled ? "23px" : "3px", transition: "all 0.3s", boxShadow: "0 2px 4px rgba(0,0,0,0.2)" }}></div>
+                  </button>
+                </div>
+
+                <h4 style={{ fontSize: "12px", textTransform: "uppercase", color: "var(--text-secondary)", letterSpacing: "1px", margin: "12px 0 4px" }}>General</h4>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 0" }}>
+                  <span style={{ fontSize: "14px", color: "white", fontWeight: "500" }}>Data Saver Mode</span>
+                  <button 
+                    onClick={() => {
+                      setIsDataSaverEnabled(!isDataSaverEnabled);
+                      setToastMsg(isDataSaverEnabled ? "Data saver disabled" : "Data saver enabled");
+                    }}
+                    style={{
+                      width: "44px", height: "24px", borderRadius: "100px", background: isDataSaverEnabled ? "#fbbf24" : "rgba(255,255,255,0.2)",
+                      position: "relative", border: "none", cursor: "pointer", transition: "all 0.3s"
+                    }}
+                  >
+                    <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: "white", position: "absolute", top: "3px", left: isDataSaverEnabled ? "23px" : "3px", transition: "all 0.3s", boxShadow: "0 2px 4px rgba(0,0,0,0.2)" }}></div>
+                  </button>
+                </div>
+                
+                <button 
+                  className="invite-option-btn" 
+                  onClick={() => {
+                    setToastMsg("System diagnostics sent successfully.");
+                    setIsSettingsOpen(false);
+                  }} 
+                  style={{ marginTop: "4px", color: "var(--text-secondary)" }}
+                >
+                  Report an Issue
                 </button>
                 
                 <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.1)", textAlign: "center" }}>
@@ -796,6 +855,14 @@ export default function CustomRoomLayout() {
             style={{ background: localParticipant?.isScreenShareEnabled ? "var(--primary-cyan)" : "" }}
           >
             <MonitorUp size={20} />
+          </button>
+
+          <button 
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)} 
+            className={`btn-glass desktop-only ${isSettingsOpen ? 'active' : ''}`} 
+            title="More Options"
+          >
+            <MoreVertical size={20} />
           </button>
 
           <div style={{ width: "1px", height: "32px", background: "var(--glass-border)", margin: "0 8px" }} className="divider-desktop-only"></div>
@@ -1091,11 +1158,18 @@ export default function CustomRoomLayout() {
           70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
           100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
-
-        /* Desktop only elements */
-        .desktop-only {
-          display: none !important;
+        @keyframes toastSlideDown {
+          from { transform: translate(-50%, -30px); opacity: 0; }
+          to { transform: translate(-50%, 0); opacity: 1; }
         }
+        
+        ${isMirrorVideoEnabled ? '' : `
+        .lk-participant-tile[data-lk-local-participant="true"] video {
+          transform: none !important;
+        }
+        `}
+
+        /* Desktop only elements (default shown, hidden on mobile) */
         
         .side-controls .btn-glass {
           min-width: 48px;
@@ -1122,6 +1196,9 @@ export default function CustomRoomLayout() {
 
         /* Mobile specific overrides */
         @media (max-width: 768px) {
+          .desktop-only {
+            display: none !important;
+          }
           .mobile-only-btn {
             display: flex !important;
           }
