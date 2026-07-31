@@ -38,13 +38,15 @@ export async function GET(req: NextRequest) {
             break;
           }
         }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (e) {
         // Ignore metadata parse errors
       }
     }
 
     return NextResponse.json({ status: "success", hostName });
-  } catch (error: any) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error: unknown) {
     // If room doesn't exist, LiveKit throws an error
     return NextResponse.json({ error: "Room not found or host hasn't joined yet" }, { status: 404 });
   }

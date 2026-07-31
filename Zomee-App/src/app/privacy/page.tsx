@@ -51,7 +51,7 @@ export default function PrivacyPolicy() {
               <ul>
                 <li>To provide and maintain the Zomee service (facilitating peer-to-peer and server-relayed LiveKit connections).</li>
                 <li>To notify you about critical changes to our service.</li>
-                <li>To provide customer support and improve the platform's stability.</li>
+                <li>To provide customer support and improve the platform&apos;s stability.</li>
               </ul>
             </section>
 

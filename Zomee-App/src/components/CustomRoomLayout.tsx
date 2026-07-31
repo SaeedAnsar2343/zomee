@@ -1,12 +1,13 @@
 "use client";
 
 import { useTracks, GridLayout, ParticipantTile, RoomAudioRenderer, ControlBar, useParticipants, useDataChannel, useLocalParticipant, useRoomContext, useChat } from "@livekit/components-react";
-import { Track, RoomEvent, ConnectionQuality, Participant } from "livekit-client";
+import { Track, RoomEvent, ConnectionQuality, Participant, Room } from "livekit-client";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Recorder from "./Recorder";
 import { MessageSquare, X, Users, Link as LinkIcon, Smile, MicOff, VideoOff, MessageSquareOff, Hand, Mic, Video, LogOut, FlipHorizontal } from "lucide-react";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const HandOverlay = ({ participant, trackRef, raisedHands }: { participant?: any, trackRef?: any, raisedHands: Set<string> }) => {
   // trackRef can contain participant either directly or inside trackRef.participant
   const p = participant || trackRef?.participant;
@@ -18,6 +19,7 @@ const HandOverlay = ({ participant, trackRef, raisedHands }: { participant?: any
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CustomGridTile = ({ trackRef, raisedHands, ...props }: any) => {
   return (
     <div {...props} style={{ ...props.style, position: "relative", borderRadius: "16px", overflow: "hidden" }}>
@@ -39,10 +41,12 @@ export default function CustomRoomLayout() {
   );
 
   const [currentPage, setCurrentPage] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [shuffledTracks, setShuffledTracks] = useState<any[]>([]);
 
   useEffect(() => {
     const updateShuffled = () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const isTrackHost = (trackRef: any) => {
         try {
            return JSON.parse(trackRef.participant?.metadata || "{}").isHost;
@@ -72,6 +76,7 @@ export default function CustomRoomLayout() {
   // Ensure current page is valid if participants leave
   useEffect(() => {
     if (currentPage >= totalPages && totalPages > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentPage(totalPages - 1);
     }
   }, [totalPages, currentPage]);
@@ -97,7 +102,7 @@ export default function CustomRoomLayout() {
   const [showEndMeetingModal, setShowEndMeetingModal] = useState(false);
   const [showGuestLeaveModal, setShowGuestLeaveModal] = useState(false);
   const [meetingEndedDuration, setMeetingEndedDuration] = useState("");
-  const [meetingStartTime, setMeetingStartTime] = useState<number>(Date.now());
+  const [meetingStartTime, setMeetingStartTime] = useState<number>(() => Date.now());
   const [timeRemaining, setTimeRemaining] = useState<number>(3600); // 60 minutes
   const [isControlBarOpen, setIsControlBarOpen] = useState(true);
   const [lastReadCount, setLastReadCount] = useState(0);
@@ -112,6 +117,7 @@ export default function CustomRoomLayout() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     resetHideTimer();
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
@@ -122,7 +128,7 @@ export default function CustomRoomLayout() {
   const { chatMessages, send: sendChatMessage } = useChat();
   const [chatInput, setChatInput] = useState("");
   const [systemMessages, setSystemMessages] = useState<{id: string, timestamp: number, message: string}[]>([]);
-  const [syncedHistory, setSyncedHistory] = useState<any[]>([]);
+  const [syncedHistory, setSyncedHistory] = useState<unknown[]>([]);
 
   const addSystemMessage = useCallback((msg: string) => {
     setSystemMessages(prev => [...prev, { id: Math.random().toString(), timestamp: Date.now(), message: msg }]);
@@ -140,6 +146,7 @@ export default function CustomRoomLayout() {
 
   useEffect(() => {
     if (sidebarTab === "chat") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLastReadCount(combinedMessages.length);
     }
   }, [sidebarTab, combinedMessages.length]);
@@ -153,7 +160,7 @@ export default function CustomRoomLayout() {
   useEffect(() => {
     const getDevices = async () => {
       try {
-        const devices = await room.getLocalDevices('videoinput');
+        const devices = await Room.getLocalDevices('videoinput');
         setVideoDevices(devices);
       } catch (e) {
         console.error("Error fetching video devices", e);
@@ -169,80 +176,6 @@ export default function CustomRoomLayout() {
       await room.switchActiveDevice('videoinput', videoDevices[nextIndex].deviceId);
     }
   };
-
-  // Timer logic & Persistence
-  useEffect(() => {
-    if (isHost && typeof window !== "undefined") {
-      const roomId = window.location.pathname.split('/').pop();
-      if (roomId) {
-        const storedTime = localStorage.getItem(`zomee_start_${roomId}`);
-        if (storedTime) {
-          setMeetingStartTime(parseInt(storedTime, 10));
-        } else {
-          localStorage.setItem(`zomee_start_${roomId}`, meetingStartTime.toString());
-        }
-      }
-    }
-  }, [isHost]); // Run once when host status is determined
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const remaining = 3600 - Math.floor((Date.now() - meetingStartTime) / 1000);
-      if (remaining <= 0) {
-        setTimeRemaining(0);
-        if (isHost) handleConfirmEndMeeting();
-      } else {
-        setTimeRemaining(remaining);
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [meetingStartTime, isHost]);
-
-  // Listen for participant departures, arrivals, and network quality
-  useEffect(() => {
-    const handleParticipantConnected = (participant: any) => {
-      addSystemMessage(`${participant.name || participant.identity} joined the meeting.`);
-      if (isHost) {
-        const encoder = new TextEncoder();
-        sendHostCommand(encoder.encode(JSON.stringify({ 
-          action: "sync-timer", 
-          startTime: meetingStartTime 
-        })), { reliable: true });
-
-        // Send full chat history to the new joiner
-        sendHostCommand(encoder.encode(JSON.stringify({
-          action: "sync-history",
-          target: participant.identity,
-          history: combinedMessages
-        })), { reliable: true });
-      }
-    };
-    const handleParticipantDisconnected = (participant: any) => {
-      addSystemMessage(`${participant.name || participant.identity} left the meeting.`);
-      if (isHost) {
-        setToastMsg(`${participant.name || participant.identity} left the meeting.`);
-        setTimeout(() => setToastMsg(""), 4000);
-      }
-    };
-    const handleConnectionQuality = (quality: ConnectionQuality, participant: Participant) => {
-      if (participant.identity === localParticipant?.identity) {
-        if (quality === ConnectionQuality.Poor || quality === ConnectionQuality.Lost) {
-          setToastMsg("⚠️ Weak network signal detected. Video quality may drop.");
-          setTimeout(() => setToastMsg(""), 5000);
-        }
-      }
-    };
-
-    room.on(RoomEvent.ParticipantConnected, handleParticipantConnected);
-    room.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
-    room.on(RoomEvent.ConnectionQualityChanged, handleConnectionQuality);
-
-    return () => { 
-      room.off(RoomEvent.ParticipantConnected, handleParticipantConnected);
-      room.off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected); 
-      room.off(RoomEvent.ConnectionQualityChanged, handleConnectionQuality);
-    };
-  }, [room, isHost, localParticipant, addSystemMessage]);
 
   // Data channel for Host Commands
   const { send: sendHostCommand } = useDataChannel("host-commands", (msg) => {
@@ -275,6 +208,7 @@ export default function CustomRoomLayout() {
         return;
       } else if (command.action === "sync-timer") {
         if (!isHost && command.startTime) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setMeetingStartTime(command.startTime);
         }
         return;
@@ -309,7 +243,7 @@ export default function CustomRoomLayout() {
           // New joiner receives history from Host
           setSyncedHistory(prev => {
             const merged = [...prev, ...command.history];
-            return Array.from(new Map(merged.map(m => [m.id, m])).values());
+            return Array.from(new Map(merged.map(m => [(m as {id:string}).id, m])).values());
           });
         }
       }
@@ -317,7 +251,6 @@ export default function CustomRoomLayout() {
       console.error(e);
     }
   });
-
   const handleConfirmEndMeeting = () => {
     const duration = Math.floor((Date.now() - meetingStartTime) / 1000);
     const m = Math.floor(duration / 60);
@@ -355,6 +288,85 @@ export default function CustomRoomLayout() {
       setTimeout(() => setToastMsg(""), 2000);
     }
   };
+
+
+  // Timer logic & Persistence
+  useEffect(() => {
+    if (isHost && typeof window !== "undefined") {
+      const roomId = window.location.pathname.split('/').pop();
+      if (roomId) {
+        const storedTime = localStorage.getItem(`zomee_start_${roomId}`);
+        if (storedTime) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setMeetingStartTime(parseInt(storedTime, 10));
+        } else {
+          localStorage.setItem(`zomee_start_${roomId}`, meetingStartTime.toString());
+        }
+      }
+    }
+  }, [isHost]); // Run once when host status is determined
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const remaining = 3600 - Math.floor((Date.now() - meetingStartTime) / 1000);
+      if (remaining <= 0) {
+        setTimeRemaining(0);
+        if (isHost) handleConfirmEndMeeting();
+      } else {
+        setTimeRemaining(remaining);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [meetingStartTime, isHost]);
+
+  // Listen for participant departures, arrivals, and network quality
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleParticipantConnected = (participant: any) => {
+      addSystemMessage(`${participant.name || participant.identity} joined the meeting.`);
+      if (isHost) {
+        const encoder = new TextEncoder();
+        sendHostCommand(encoder.encode(JSON.stringify({ 
+          action: "sync-timer", 
+          startTime: meetingStartTime 
+        })), { reliable: true });
+
+        // Send full chat history to the new joiner
+        sendHostCommand(encoder.encode(JSON.stringify({
+          action: "sync-history",
+          target: participant.identity,
+          history: combinedMessages
+        })), { reliable: true });
+      }
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleParticipantDisconnected = (participant: any) => {
+      addSystemMessage(`${participant.name || participant.identity} left the meeting.`);
+      if (isHost) {
+        setToastMsg(`${participant.name || participant.identity} left the meeting.`);
+        setTimeout(() => setToastMsg(""), 4000);
+      }
+    };
+    const handleConnectionQuality = (quality: ConnectionQuality, participant: Participant) => {
+      if (participant.identity === localParticipant?.identity) {
+        if (quality === ConnectionQuality.Poor || quality === ConnectionQuality.Lost) {
+          setToastMsg("⚠️ Weak network signal detected. Video quality may drop.");
+          setTimeout(() => setToastMsg(""), 5000);
+        }
+      }
+    };
+
+    room.on(RoomEvent.ParticipantConnected, handleParticipantConnected);
+    room.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
+    room.on(RoomEvent.ConnectionQualityChanged, handleConnectionQuality);
+
+    return () => { 
+      room.off(RoomEvent.ParticipantConnected, handleParticipantConnected);
+      room.off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected); 
+      room.off(RoomEvent.ConnectionQualityChanged, handleConnectionQuality);
+    };
+  }, [room, isHost, localParticipant, addSystemMessage]);
+
 
   const toggleHand = () => {
     if (!localParticipant) return;
@@ -399,12 +411,6 @@ export default function CustomRoomLayout() {
     }
   };
 
-  const { send } = useDataChannel("reactions", (msg) => {
-    const decoder = new TextDecoder();
-    const emoji = decoder.decode(msg.payload);
-    triggerLocalReaction(emoji);
-  });
-
   const triggerLocalReaction = useCallback((emoji: string) => {
     const newEmoji = { id: Date.now() + Math.random(), emoji, left: 10 + Math.random() * 80 };
     setFloatingEmojis((prev) => [...prev, newEmoji]);
@@ -412,6 +418,12 @@ export default function CustomRoomLayout() {
       setFloatingEmojis((prev) => prev.filter((e) => e.id !== newEmoji.id));
     }, 4000);
   }, []);
+
+  const { send } = useDataChannel("reactions", (msg) => {
+    const decoder = new TextDecoder();
+    const emoji = decoder.decode(msg.payload);
+    triggerLocalReaction(emoji);
+  });
 
   const COMMON_EMOJIS = ["👍", "👏", "😂", "🎉", "💖"];
 
@@ -465,7 +477,7 @@ export default function CustomRoomLayout() {
           background: "rgba(15, 23, 42, 0.7)", backdropFilter: "blur(8px)",
           display: "flex", alignItems: "center", justifyContent: "center"
         }}>
-          <div className="glass-panel" style={{ padding: "32px", textAlign: "center", maxWidth: "400px", border: "1px solid var(--primary-cyan)" }}>
+          <div className="glass-panel" style={{ padding: "32px", textAlign: "center", maxWidth: "400px", width: "90%", border: "1px solid var(--primary-cyan)" }}>
             {incomingRequest.type === 'mic' ? <Mic size={48} style={{ color: "var(--primary-cyan)", marginBottom: "16px" }} /> : <Video size={48} style={{ color: "var(--primary-cyan)", marginBottom: "16px" }} />}
             <h2 style={{ marginBottom: "8px" }}>The Host is requesting you to unmute your {incomingRequest.type === 'mic' ? 'microphone' : 'video'}.</h2>
             <p style={{ color: "var(--text-secondary)", marginBottom: "24px" }}>Do you want to allow this?</p>
@@ -484,7 +496,7 @@ export default function CustomRoomLayout() {
           background: "rgba(15, 23, 42, 0.7)", backdropFilter: "blur(8px)",
           display: "flex", alignItems: "center", justifyContent: "center"
         }}>
-          <div className="glass-panel" style={{ padding: "32px", textAlign: "center", maxWidth: "400px", border: "1px solid var(--danger)" }}>
+          <div className="glass-panel" style={{ padding: "32px", textAlign: "center", maxWidth: "400px", width: "90%", border: "1px solid var(--danger)" }}>
             <LogOut size={48} style={{ color: "var(--danger)", marginBottom: "16px" }} />
             <h2 style={{ marginBottom: "8px" }}>Leave Meeting</h2>
             <p style={{ color: "var(--text-secondary)", marginBottom: "24px" }}>You are the host. Do you want to leave the meeting, or end it for everyone?</p>
@@ -500,7 +512,7 @@ export default function CustomRoomLayout() {
       {/* Leave Meeting Alert (Guest) */}
       {showGuestLeaveModal && (
         <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(15, 23, 42, 0.8)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(12px)" }}>
-          <div className="glass-panel" style={{ padding: "40px", textAlign: "center", maxWidth: "400px" }}>
+          <div className="glass-panel" style={{ padding: "40px", textAlign: "center", maxWidth: "400px", width: "90%" }}>
             <h2 style={{ marginBottom: "8px" }}>Leave Meeting?</h2>
             <p style={{ color: "var(--text-secondary)", marginBottom: "24px" }}>Are you sure you want to leave this meeting?</p>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>

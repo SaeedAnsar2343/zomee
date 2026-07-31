@@ -62,8 +62,8 @@ export default function RoomPage() {
       const data = await res.json();
       setToken(data.token);
       setHasJoined(true);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsGettingToken(false);
     }

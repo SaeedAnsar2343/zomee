@@ -489,6 +489,28 @@ export default function Home() {
           border-radius: 50%;
           animation: spin 0.8s linear infinite;
         }
+
+        /* Mobile Responsive Overrides */
+        @media (max-width: 768px) {
+          .premium-glass-panel {
+            padding: 36px 24px !important;
+          }
+          .hero-title {
+            font-size: 2.5rem;
+          }
+          .hero-subtitle {
+            font-size: 0.95rem;
+            padding: 0 10px;
+          }
+          .premium-badge {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+          }
+          .footer-support {
+            padding: 12px 16px;
+            font-size: 0.75rem;
+          }
+        }
       `}</style>
     </main>
   );
