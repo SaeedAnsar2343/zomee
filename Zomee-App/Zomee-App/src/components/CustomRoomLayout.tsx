@@ -1,15 +1,15 @@
 "use client";
 
-import { useTracks, GridLayout, ParticipantTile, RoomAudioRenderer, ControlBar, useParticipants, useDataChannel, useLocalParticipant, useRoomContext, useChat, useParticipantContext } from "@livekit/components-react";
+import { useTracks, GridLayout, ParticipantTile, RoomAudioRenderer, ControlBar, useParticipants, useDataChannel, useLocalParticipant, useRoomContext, useChat } from "@livekit/components-react";
 import { Track, RoomEvent, ConnectionQuality, Participant } from "livekit-client";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Recorder from "./Recorder";
 import { MessageSquare, X, Users, Link as LinkIcon, Smile, MicOff, VideoOff, MessageSquareOff, Hand, Mic, Video, LogOut } from "lucide-react";
 
-const HandOverlay = ({ participant, raisedHands }: { participant: any, raisedHands: Set<string> }) => {
+const HandOverlay = ({ participant, trackRef, raisedHands }: { participant?: any, trackRef?: any, raisedHands: Set<string> }) => {
   // trackRef can contain participant either directly or inside trackRef.participant
-  const p = participant || (arguments[0] as any)?.trackRef?.participant;
+  const p = participant || trackRef?.participant;
   if (!p || !raisedHands.has(p.identity)) return null;
   return (
     <div style={{ position: "absolute", top: "16px", right: "16px", zIndex: 9999, background: "rgba(250, 204, 21, 0.2)", padding: "12px", borderRadius: "50%", border: "2px solid rgba(250, 204, 21, 0.5)", boxShadow: "0 0 20px rgba(250, 204, 21, 0.6)", animation: "pulseHand 1.5s infinite" }}>

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Video, Users, Link as LinkIcon, Shield, Zap, Globe2, Lock } from 'lucide-react';
+import { Video, Zap, Globe2, Lock } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
