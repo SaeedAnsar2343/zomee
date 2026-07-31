@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Video, Zap, Globe2, Lock } from 'lucide-react';
+import { Video, Zap, Globe2, Lock, ArrowRight, Video as VideoIcon } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -46,20 +46,23 @@ export default function Home() {
   };
 
   return (
-    <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", position: "relative", overflow: "hidden" }}>
+    <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", padding: "20px", position: "relative", overflow: "hidden", backgroundColor: "#020617" }}>
       
-      {/* Abstract Background with Grid overlay */}
-      <div className="bg-orb" style={{ position: "absolute", top: "-20%", left: "-10%", width: "70vw", height: "70vw", background: "radial-gradient(circle, rgba(34, 211, 238, 0.15) 0%, rgba(0,0,0,0) 70%)", borderRadius: "50%", zIndex: 0, filter: "blur(60px)", animation: "float 10s ease-in-out infinite" }}></div>
-      <div className="bg-orb" style={{ position: "absolute", bottom: "-20%", right: "-10%", width: "60vw", height: "60vw", background: "radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, rgba(0,0,0,0) 70%)", borderRadius: "50%", zIndex: 0, filter: "blur(60px)", animation: "float 14s ease-in-out infinite reverse" }}></div>
-      <div className="bg-grid"></div>
+      {/* Premium Aurora Background */}
+      <div className="aurora-blob aurora-1"></div>
+      <div className="aurora-blob aurora-2"></div>
+      <div className="aurora-blob aurora-3"></div>
+      
+      {/* Refined Grid Overlay */}
+      <div className="premium-grid"></div>
 
       {/* Toast Notification */}
       {toastMessage && (
         <div style={{
           position: "absolute", top: "32px", left: "50%", transform: "translateX(-50%)",
-          background: "rgba(239, 68, 68, 0.2)", backdropFilter: "blur(12px)", border: "1px solid rgba(239, 68, 68, 0.5)",
-          color: "white", padding: "12px 24px", borderRadius: "100px", zIndex: 100,
-          boxShadow: "0 10px 30px rgba(239, 68, 68, 0.2)", fontWeight: "500", animation: "fadeInDown 0.3s ease-out"
+          background: "rgba(255, 255, 255, 0.05)", backdropFilter: "blur(20px)", border: "1px solid rgba(255, 255, 255, 0.1)",
+          color: "white", padding: "14px 28px", borderRadius: "100px", zIndex: 100,
+          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.05)", fontWeight: "500", animation: "slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1)"
         }}>
           {toastMessage}
         </div>
@@ -69,179 +72,422 @@ export default function Home() {
       {foundHost && (
         <div style={{
           position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 200,
-          background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(12px)",
+          background: "rgba(2, 6, 23, 0.85)", backdropFilter: "blur(20px)",
           display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column"
         }}>
-          <div className="glass-panel" style={{ padding: "48px 32px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "100%", height: "2px", background: "linear-gradient(90deg, transparent, rgba(34,211,238,0.5), transparent)" }}></div>
+          <div className="premium-glass-panel" style={{ padding: "50px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", position: "relative", overflow: "hidden" }}>
+            <div className="shimmer-line"></div>
             
-            <div style={{ 
-              width: "80px", height: "80px", background: "linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(14, 165, 233, 0.2))", 
-              borderRadius: "24px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "24px",
-              border: "1px solid rgba(34, 211, 238, 0.3)", boxShadow: "0 0 30px rgba(34, 211, 238, 0.2)"
-            }}>
-              <Video size={40} style={{ color: "var(--primary-cyan)" }} />
+            <div className="logo-pulse-container" style={{ marginBottom: "28px" }}>
+              <div className="logo-glow"></div>
+              <div className="logo-icon-wrapper">
+                <VideoIcon size={44} style={{ color: "white" }} />
+              </div>
             </div>
-            <h2 style={{ marginBottom: "8px", fontSize: "1.8rem" }}>Meeting Found!</h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "1.2rem", marginBottom: "24px" }}>Hosted by: <strong style={{ color: "white" }}>{foundHost}</strong></p>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", justifyContent: "center", color: "var(--primary-cyan)" }}>
-              <div style={{ width: "24px", height: "24px", border: "3px solid var(--primary-cyan)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
-              Joining...
+            
+            <h2 style={{ marginBottom: "12px", fontSize: "2rem", fontWeight: "700", letterSpacing: "-0.03em" }}>Meeting Found</h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "1.1rem", marginBottom: "32px" }}>Hosted by: <strong style={{ color: "white", fontWeight: "600" }}>{foundHost}</strong></p>
+            
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", justifyContent: "center", color: "white", fontSize: "1.1rem", fontWeight: "500" }}>
+              <div className="spinner"></div>
+              Connecting securely...
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ zIndex: 10, width: "100%", maxWidth: "480px", display: "flex", flexDirection: "column", gap: "24px" }} className="animate-fade-in">
-        <div className="glass-panel" style={{ width: "100%", padding: "48px 40px", textAlign: "center" }}>
+      <div style={{ zIndex: 10, width: "100%", maxWidth: "520px", display: "flex", flexDirection: "column", gap: "24px" }} className="animate-fade-in-up">
+        
+        {/* Main Hero Panel */}
+        <div className="premium-glass-panel" style={{ width: "100%", padding: "56px 48px", textAlign: "center" }}>
           
-          <div 
-            className="water-bubble"
-            style={{ width: "110px", height: "110px", margin: "0 auto 36px", display: "flex", alignItems: "center", justifyContent: "center" }}
-          >
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="23 7 16 12 23 17 23 7"></polygon>
-              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-            </svg>
-          </div>
-
-          <h1 style={{ fontSize: "3rem", fontWeight: "800", marginBottom: "8px", letterSpacing: "-0.03em", background: "linear-gradient(135deg, #fff 0%, #a5b4fc 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Zomee</h1>
-          <p style={{ color: "var(--text-secondary)", marginBottom: "32px", fontSize: "1.1rem" }}>Experience fluid, real-time meetings.</p>
-
-          {/* Horizontal Feature Badges */}
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "12px", marginTop: "16px" }}>
-            <div className="feature-pill">
-              <Lock size={14} color="#22c55e" />
-              <span>E2E Encrypted</span>
-            </div>
-            <div className="feature-pill">
-              <Globe2 size={14} color="var(--primary-cyan)" />
-              <span>Global Edge</span>
-            </div>
-            <div className="feature-pill">
-              <Zap size={14} color="#facc15" />
-              <span>Instant Join</span>
+          <div className="logo-pulse-container" style={{ margin: "0 auto 32px" }}>
+            <div className="logo-glow"></div>
+            <div className="logo-icon-wrapper">
+              <VideoIcon size={40} style={{ color: "white" }} />
             </div>
           </div>
 
-          <form onSubmit={joinMeeting} style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "32px", marginBottom: "28px" }}>
-            <input 
-              type="text" 
-              className="glass-input" 
-              placeholder="Enter meeting code..." 
-              value={meetingCode}
-              onChange={(e) => setMeetingCode(e.target.value)}
-            />
+          <h1 className="hero-title">Zomee</h1>
+          <p className="hero-subtitle">The next generation of fluid, high-fidelity video meetings.</p>
+
+          {/* Feature Badges */}
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "10px", marginTop: "24px", marginBottom: "36px" }}>
+            <div className="premium-badge"><Lock size={14} color="#34d399" /><span>E2E Encrypted</span></div>
+            <div className="premium-badge"><Globe2 size={14} color="#38bdf8" /><span>Global Edge</span></div>
+            <div className="premium-badge"><Zap size={14} color="#fbbf24" /><span>Instant Join</span></div>
+          </div>
+
+          <form onSubmit={joinMeeting} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div className="input-group">
+              <input 
+                type="text" 
+                className="premium-input" 
+                placeholder="Enter meeting code" 
+                value={meetingCode}
+                onChange={(e) => setMeetingCode(e.target.value)}
+              />
+              <div className="input-glow"></div>
+            </div>
+            
             <button 
               type="submit" 
-              className="btn-primary" 
-              style={{ width: "100%", padding: "16px" }}
+              className="premium-btn primary" 
               disabled={!meetingCode.trim() || isVerifying}
             >
-              {isVerifying ? "Verifying..." : "Join Anonymous Meeting"}
+              <span>{isVerifying ? "Verifying..." : "Join Anonymous Meeting"}</span>
+              {!isVerifying && <ArrowRight size={18} className="btn-icon" />}
             </button>
           </form>
 
-          <div style={{ display: "flex", alignItems: "center", margin: "28px 0", color: "var(--text-secondary)" }}>
-            <div style={{ flex: 1, height: "1px", background: "var(--glass-border)" }}></div>
-            <span style={{ margin: "0 16px", fontSize: "0.875rem", fontWeight: "600", letterSpacing: "0.05em" }}>OR</span>
-            <div style={{ flex: 1, height: "1px", background: "var(--glass-border)" }}></div>
+          <div className="divider">
+            <span className="divider-text">OR</span>
           </div>
 
           <button 
             onClick={handleCreateMeeting}
-            className="btn-primary"
-            style={{ 
-              width: "100%", 
-              padding: "16px",
-              background: isHovering ? "var(--glass-bg)" : "transparent",
-              border: "1px solid var(--primary-cyan)",
-              color: "var(--primary-cyan)",
-              boxShadow: isHovering ? "0 0 20px rgba(34, 211, 238, 0.2)" : "none"
-            }}
+            className="premium-btn secondary"
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
           >
-            Create New Meeting
+            <span>Create New Meeting</span>
           </button>
         </div>
 
-        {/* Footer Links & Support */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", color: "var(--text-secondary)", fontSize: "0.875rem", marginTop: "16px" }}>
-          <div style={{ textAlign: "center", lineHeight: "1.5", background: "rgba(255,255,255,0.03)", padding: "12px 24px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)" }}>
-            <span style={{ color: "white" }}>Created independently by <strong>Saeed Ansar</strong>.</span><br/>
-            <span>To help keep Zomee's servers completely free, you can support via <strong>Botim: +971588346500</strong></span>
+        {/* Footer */}
+        <div className="footer-container">
+          <div className="footer-support">
+            <span style={{ display: "block", color: "rgba(255,255,255,0.9)", marginBottom: "6px" }}>Built independently by <strong>Saeed Ansar</strong>.</span>
+            <span>To support server costs, send help via <strong>Botim: +971588346500</strong></span>
           </div>
-          <div style={{ display: "flex", gap: "24px" }}>
-            <a href="/privacy" className="footer-link">Privacy Policy</a>
-            <a href="/terms" className="footer-link">Terms of Use</a>
+          <div className="footer-links">
+            <a href="/privacy">Privacy Policy</a>
+            <span className="dot">•</span>
+            <a href="/terms">Terms of Use</a>
           </div>
         </div>
       </div>
 
       <style jsx global>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0) scale(1); }
-          50% { transform: translateY(-20px) scale(1.05); }
-        }
-        
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+        :root {
+          --cyan-500: #06b6d4;
+          --blue-500: #3b82f6;
+          --indigo-500: #6366f1;
         }
 
-        @keyframes fadeInDown {
+        /* Animations */
+        @keyframes slideDown {
           0% { opacity: 0; transform: translate(-50%, -20px); }
           100% { opacity: 1; transform: translate(-50%, 0); }
         }
 
-        @keyframes fadeIn {
-          0% { opacity: 0; transform: translateY(20px); filter: blur(10px); }
-          100% { opacity: 1; transform: translateY(0); filter: blur(0); }
-        }
-        
-        .animate-fade-in {
-          animation: fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        @keyframes fadeInUp {
+          0% { opacity: 0; transform: translateY(30px) scale(0.95); filter: blur(10px); }
+          100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
         }
 
-        .bg-grid {
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulseLogo {
+          0%, 100% { transform: scale(1); opacity: 0.5; }
+          50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        @keyframes blobFloat1 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+
+        @keyframes blobFloat2 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(-50px, 30px) scale(1.2); }
+          66% { transform: translate(20px, -20px) scale(0.8); }
+        }
+
+        .animate-fade-in-up {
+          animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Background Aurora */
+        .aurora-blob {
           position: absolute;
-          top: 0; left: 0; width: 100%; height: 100%;
-          background-image: 
-            linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
-          background-size: 50px 50px;
+          filter: blur(80px);
+          opacity: 0.4;
+          border-radius: 50%;
           z-index: 0;
           pointer-events: none;
         }
+        .aurora-1 {
+          top: -10%; left: -10%; width: 50vw; height: 50vw;
+          background: radial-gradient(circle, var(--indigo-500), transparent 70%);
+          animation: blobFloat1 15s infinite ease-in-out;
+        }
+        .aurora-2 {
+          bottom: -20%; right: -10%; width: 60vw; height: 60vw;
+          background: radial-gradient(circle, var(--cyan-500), transparent 70%);
+          animation: blobFloat2 18s infinite ease-in-out reverse;
+        }
+        .aurora-3 {
+          top: 30%; left: 40%; width: 40vw; height: 40vw;
+          background: radial-gradient(circle, var(--blue-500), transparent 70%);
+          animation: blobFloat1 20s infinite ease-in-out 2s;
+          opacity: 0.2;
+        }
 
-        .feature-pill {
+        .premium-grid {
+          position: absolute;
+          top: 0; left: 0; width: 100%; height: 100%;
+          background-image: 
+            linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+          background-size: 40px 40px;
+          z-index: 0;
+          pointer-events: none;
+          mask-image: radial-gradient(circle at center, black, transparent 80%);
+          -webkit-mask-image: radial-gradient(circle at center, black, transparent 80%);
+        }
+
+        /* Premium Glass Panel */
+        .premium-glass-panel {
+          background: rgba(15, 23, 42, 0.4);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 32px;
+          box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .shimmer-line {
+          position: absolute;
+          top: 0; left: 0; width: 100%; height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+          animation: shimmer 3s infinite linear;
+        }
+
+        /* Logo Component */
+        .logo-pulse-container {
+          position: relative;
+          width: 80px; height: 80px;
+          display: flex; alignItems: center; justifyContent: center;
+        }
+        .logo-glow {
+          position: absolute;
+          width: 100%; height: 100%;
+          background: linear-gradient(135deg, var(--cyan-500), var(--blue-500));
+          border-radius: 24px;
+          filter: blur(15px);
+          animation: pulseLogo 4s infinite ease-in-out;
+        }
+        .logo-icon-wrapper {
+          position: relative;
+          width: 100%; height: 100%;
+          background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03));
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 24px;
+          display: flex; align-items: center; justify-content: center;
+          backdrop-filter: blur(10px);
+          box-shadow: inset 0 2px 20px rgba(255,255,255,0.1);
+        }
+
+        /* Typography */
+        .hero-title {
+          font-size: 3.5rem;
+          font-weight: 800;
+          margin-bottom: 8px;
+          letter-spacing: -0.04em;
+          background: linear-gradient(180deg, #ffffff 0%, #a1a1aa 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+        .hero-subtitle {
+          color: #a1a1aa;
+          font-size: 1.15rem;
+          letter-spacing: -0.01em;
+          line-height: 1.5;
+        }
+
+        /* Badges */
+        .premium-badge {
           background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.1);
-          padding: 8px 16px;
+          border: 1px solid rgba(255,255,255,0.05);
+          padding: 6px 14px;
           border-radius: 100px;
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 0.85rem;
-          color: var(--text-secondary);
-          transition: all 0.3s ease;
-          backdrop-filter: blur(8px);
+          gap: 6px;
+          font-size: 0.8rem;
+          color: #d4d4d8;
+          font-weight: 500;
+          transition: all 0.2s ease;
         }
-        
-        .feature-pill:hover {
+        .premium-badge:hover {
           background: rgba(255,255,255,0.08);
-          border-color: rgba(34,211,238,0.3);
+          border-color: rgba(255,255,255,0.15);
           color: white;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+          transform: translateY(-1px);
         }
 
-        .footer-link {
-          transition: color 0.2s;
+        /* Inputs */
+        .input-group {
+          position: relative;
         }
-        .footer-link:hover {
-          color: var(--primary-cyan);
+        .premium-input {
+          width: 100%;
+          background: rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          padding: 18px 24px;
+          color: white;
+          font-size: 1.05rem;
+          transition: all 0.3s ease;
+          outline: none;
+          box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .premium-input::placeholder {
+          color: #71717a;
+        }
+        .input-glow {
+          position: absolute;
+          inset: -1px;
+          border-radius: 16px;
+          background: linear-gradient(90deg, var(--cyan-500), var(--blue-500));
+          z-index: -1;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+        .premium-input:focus {
+          border-color: transparent;
+          background: rgba(0, 0, 0, 0.4);
+        }
+        .premium-input:focus + .input-glow {
+          opacity: 1;
+        }
+
+        /* Buttons */
+        .premium-btn {
+          width: 100%;
+          padding: 18px;
+          border-radius: 16px;
+          font-size: 1.05rem;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          cursor: pointer;
+          position: relative;
+          overflow: hidden;
+        }
+        .premium-btn.primary {
+          background: linear-gradient(135deg, var(--text-primary) 0%, #e4e4e7 100%);
+          color: #09090b;
+          border: none;
+          box-shadow: 0 10px 25px rgba(255,255,255,0.15);
+        }
+        .premium-btn.primary:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 15px 35px rgba(255,255,255,0.25);
+          background: white;
+        }
+        .premium-btn.primary:active:not(:disabled) {
+          transform: translateY(1px);
+          box-shadow: 0 5px 15px rgba(255,255,255,0.1);
+        }
+        .premium-btn.primary:disabled {
+          background: rgba(255,255,255,0.1);
+          color: rgba(255,255,255,0.3);
+          box-shadow: none;
+          cursor: not-allowed;
+        }
+        .premium-btn .btn-icon {
+          transition: transform 0.3s ease;
+        }
+        .premium-btn:hover .btn-icon {
+          transform: translateX(4px);
+        }
+
+        .divider {
+          display: flex;
+          align-items: center;
+          margin: 28px 0;
+          position: relative;
+        }
+        .divider::before, .divider::after {
+          content: "";
+          flex: 1;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        }
+        .divider-text {
+          margin: 0 16px;
+          font-size: 0.8rem;
+          color: #71717a;
+          font-weight: 600;
+          letter-spacing: 0.05em;
+        }
+
+        .premium-btn.secondary {
+          background: transparent;
+          color: white;
+          border: 1px solid rgba(255,255,255,0.15);
+        }
+        .premium-btn.secondary:hover {
+          background: rgba(255,255,255,0.05);
+          border-color: rgba(255,255,255,0.3);
+        }
+
+        /* Footer */
+        .footer-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
+          margin-top: 10px;
+        }
+        .footer-support {
+          background: rgba(255,255,255,0.02);
+          border: 1px solid rgba(255,255,255,0.05);
+          padding: 16px 24px;
+          border-radius: 16px;
+          font-size: 0.85rem;
+          color: #a1a1aa;
+          text-align: center;
+          backdrop-filter: blur(10px);
+        }
+        .footer-links {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          font-size: 0.85rem;
+          color: #71717a;
+        }
+        .footer-links a {
+          transition: color 0.2s ease;
+        }
+        .footer-links a:hover {
+          color: white;
+        }
+        .dot {
+          font-size: 0.6rem;
+          opacity: 0.5;
+        }
+
+        .spinner {
+          width: 20px;
+          height: 20px;
+          border: 2px solid rgba(255,255,255,0.2);
+          border-top-color: white;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
         }
       `}</style>
     </main>
