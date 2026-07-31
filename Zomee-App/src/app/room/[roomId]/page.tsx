@@ -71,7 +71,7 @@ export default function RoomPage() {
 
   if (error) {
     return (
-      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
+      <div style={{ height: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
         <h2 style={{ color: "var(--danger)" }}>Error joining room</h2>
         <p>{error}</p>
         <button className="btn-primary" style={{ marginTop: "20px" }} onClick={() => router.push("/")}>Go Back</button>
@@ -82,7 +82,7 @@ export default function RoomPage() {
   // Render Pre-Join Lobby
   if (!hasJoined || !token) {
     return (
-      <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+      <main style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
         <div className="glass-panel" style={{ width: "100%", maxWidth: "800px", padding: "40px", display: "flex", flexWrap: "wrap", gap: "32px" }}>
           
           {/* Camera Preview */}

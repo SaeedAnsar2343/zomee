@@ -46,7 +46,7 @@ export default function Home() {
   };
 
   return (
-    <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", padding: "20px", position: "relative", overflow: "hidden", backgroundColor: "#020617" }}>
+    <main style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", padding: "20px", position: "relative", overflow: "hidden", backgroundColor: "#020617" }}>
       
       {/* Premium Aurora Background */}
       <div className="aurora-blob aurora-1"></div>

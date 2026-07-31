@@ -456,7 +456,7 @@ export default function CustomRoomLayout() {
   return (
     <div 
       onMouseMove={resetHideTimer}
-      style={{ display: "flex", height: "100vh", width: "100vw", overflow: "hidden", position: "relative" }}
+      style={{ display: "flex", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, height: "100dvh", width: "100vw", overflow: "hidden" }}
     >
       
       {/* Toast */}
@@ -603,8 +603,8 @@ export default function CustomRoomLayout() {
           )}
         </div>
 
-        {/* Mobile Side Controls */}
-        <div className="mobile-side-controls">
+        {/* Side Controls (Always visible, floating on sides) */}
+        <div className="side-controls">
           <button 
             onClick={() => setSidebarTab(sidebarTab === "participants" ? null : "participants")}
             className={`btn-glass ${sidebarTab === "participants" ? 'active' : ''}`}
@@ -715,90 +715,6 @@ export default function CustomRoomLayout() {
           <div style={{ width: "1px", height: "32px", background: "var(--glass-border)", margin: "0 8px" }} className="divider-desktop-only"></div>
           
           <Recorder />
-
-          {/* Invite Menu */}
-          <div style={{ position: "relative" }} className="desktop-only">
-            <button 
-              onClick={() => setIsInviteMenuOpen(!isInviteMenuOpen)} 
-              className={`btn-glass ${isInviteMenuOpen ? 'active' : ''}`} 
-              title="Invite Options"
-            >
-              <LinkIcon size={20} />
-            </button>
-            
-            {isInviteMenuOpen && (
-              <div style={{
-                position: "absolute", bottom: "60px", left: "50%", transform: "translateX(-50%)",
-                background: "var(--glass-bg)", backdropFilter: "blur(20px)",
-                border: "1px solid var(--glass-border)", borderRadius: "12px",
-                padding: "8px", display: "flex", flexDirection: "column", gap: "8px",
-                minWidth: "160px", zIndex: 100, boxShadow: "0 10px 40px rgba(0,0,0,0.5)"
-              }}>
-                <button onClick={copyInviteLink} className="invite-option-btn">Copy Link (URL)</button>
-                <button onClick={copyInviteCode} className="invite-option-btn">Copy Room Code</button>
-              </div>
-            )}
-          </div>
-
-          {/* Emoji Menu */}
-          <div style={{ position: "relative" }} className="desktop-only">
-            <button 
-              onClick={() => setIsEmojiMenuOpen(!isEmojiMenuOpen)} 
-              className={`btn-glass ${isEmojiMenuOpen ? 'active' : ''}`} 
-              title="React"
-            >
-              <Smile size={20} />
-            </button>
-            
-            {isEmojiMenuOpen && (
-              <div style={{
-                position: "absolute", bottom: "60px", left: "50%", transform: "translateX(-50%)",
-                background: "var(--glass-bg)", backdropFilter: "blur(20px)",
-                border: "1px solid var(--glass-border)", borderRadius: "12px",
-                padding: "8px", display: "flex", gap: "8px",
-                zIndex: 100, boxShadow: "0 10px 40px rgba(0,0,0,0.5)"
-              }}>
-                {COMMON_EMOJIS.map(emoji => (
-                  <button key={emoji} onClick={() => handleReaction(emoji)} className="emoji-btn">
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          
-          <button 
-            onClick={toggleHand} 
-            className={`btn-glass desktop-only ${localParticipant && raisedHands.has(localParticipant.identity) ? 'active' : ''}`} 
-            title="Raise Hand"
-            style={{ background: localParticipant && raisedHands.has(localParticipant.identity) ? "rgba(250, 204, 21, 0.2)" : "", color: localParticipant && raisedHands.has(localParticipant.identity) ? "#facc15" : "" }}
-          >
-            <Hand size={20} />
-          </button>
-          
-          <button 
-            onClick={() => setSidebarTab(sidebarTab === "participants" ? null : "participants")}
-            className={`btn-glass desktop-only ${sidebarTab === "participants" ? 'active' : ''}`}
-            title="Participants"
-            style={{ background: sidebarTab === "participants" ? "var(--primary-cyan)" : "" }}
-          >
-            <Users size={20} />
-            <span style={{ marginLeft: "8px", fontSize: "14px", fontWeight: "bold" }}>{participants.length}</span>
-          </button>
-
-          <button 
-            onClick={() => setSidebarTab(sidebarTab === "chat" ? null : "chat")}
-            className={`btn-glass desktop-only ${sidebarTab === "chat" ? 'active' : ''}`}
-            title="Toggle Chat"
-            style={{ position: "relative", background: sidebarTab === "chat" ? "var(--primary-cyan)" : "" }}
-          >
-            <MessageSquare size={20} />
-            {unreadCount > 0 && (
-              <span style={{ position: "absolute", top: "-4px", right: "-4px", background: "var(--danger)", color: "white", fontSize: "10px", fontWeight: "bold", padding: "2px 6px", borderRadius: "100px", border: "2px solid var(--glass-bg)" }}>
-                {unreadCount}
-              </span>
-            )}
-          </button>
 
         </div>
       </div>
@@ -1091,29 +1007,37 @@ export default function CustomRoomLayout() {
         }
 
         /* Desktop only elements */
-        .mobile-side-controls {
-          display: none;
+        .desktop-only {
+          display: none !important;
+        }
+        
+        .side-controls .btn-glass {
+          min-width: 48px;
+          width: 48px;
+          height: 48px;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(15, 23, 42, 0.6);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255,255,255,0.1);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+          border-radius: 50%;
+          color: white;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .side-controls .btn-glass:hover {
+          background: rgba(255,255,255,0.15);
+          transform: scale(1.1);
+          border-color: rgba(255,255,255,0.3);
         }
 
         /* Mobile specific overrides */
         @media (max-width: 768px) {
           .mobile-only-btn {
             display: flex !important;
-          }
-          .desktop-only {
-            display: none !important;
-          }
-          .mobile-side-controls {
-            display: block;
-          }
-          .mobile-side-controls .btn-glass {
-            min-width: 44px;
-            width: 44px;
-            height: 44px;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
           }
 
 
