@@ -3,18 +3,22 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import { auth, googleProvider } from "@/lib/firebase";
+import { auth, googleProvider, isFirebaseConfigured } from "@/lib/firebase";
 import { signInWithPopup, onAuthStateChanged, User } from "firebase/auth";
 
 export default function Home() {
   const router = useRouter();
   const [meetingCode, setMeetingCode] = useState("");
-  const [isHovering, setIsHovering] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [toastMessage, setToastMessage] = useState("");
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
+    if (!auth) {
+      // Firebase not configured — skip auth entirely.
+      setIsCheckingAuth(false);
+      return;
+    }
     try {
       const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
         setUser(currentUser);
@@ -33,11 +37,8 @@ export default function Home() {
   };
 
   const handleCreateMeeting = async () => {
-    // Check if Firebase is actually configured
-    const isFirebaseConfigured = process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== "your_firebase_api_key";
-
     if (!user) {
-      if (!isFirebaseConfigured) {
+      if (!isFirebaseConfigured || !auth) {
         showToast("Firebase not configured. Creating a test meeting anyway!");
         setTimeout(() => {
           const newRoomId = uuidv4();
@@ -67,98 +68,138 @@ export default function Home() {
     }
   };
 
+  const features = [
+    {
+      title: "Crystal-clear video",
+      desc: "Adaptive HD streams that stay smooth on any connection.",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="23 7 16 12 23 17 23 7" />
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+        </svg>
+      ),
+    },
+    {
+      title: "Instant, no installs",
+      desc: "Share a link and meet in the browser in seconds.",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+        </svg>
+      ),
+    },
+    {
+      title: "Private by default",
+      desc: "Encrypted rooms with anonymous join options.",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+      ),
+    },
+  ];
+
   return (
-    <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", position: "relative" }}>
-      
+    <main className="landing">
       {/* Toast Notification */}
-      <div style={{
-        position: "absolute",
-        top: toastMessage ? "32px" : "-100px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        background: "rgba(15, 23, 42, 0.8)",
-        backdropFilter: "blur(12px)",
-        border: "1px solid var(--primary-cyan)",
-        color: "white",
-        padding: "12px 24px",
-        borderRadius: "100px",
-        transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-        zIndex: 50,
-        boxShadow: "0 10px 30px rgba(34, 211, 238, 0.2)",
-        fontWeight: "500"
-      }}>
+      <div className="toast" data-visible={toastMessage ? "true" : "false"} role="status" aria-live="polite">
         {toastMessage}
       </div>
 
-      <div 
-        className="glass-panel" 
-        style={{ width: "100%", maxWidth: "480px", padding: "48px 40px", textAlign: "center", zIndex: 10, position: "relative" }}
-      >
-        <div 
-          className="water-bubble"
-          style={{ width: "110px", height: "110px", margin: "0 auto 36px", display: "flex", alignItems: "center", justifyContent: "center" }}
-        >
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="23 7 16 12 23 17 23 7"></polygon>
-            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-          </svg>
+      <nav className="landing-nav">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="23 7 16 12 23 17 23 7" />
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+            </svg>
+          </span>
+          <span className="brand-name">Zomee</span>
         </div>
+        {user && <span className="nav-user">Hi, {user.displayName?.split(" ")[0] ?? "there"}</span>}
+      </nav>
 
-        <h1 style={{ fontSize: "2.5rem", fontWeight: "800", marginBottom: "8px", letterSpacing: "-0.02em" }}>Zomee</h1>
-        <p style={{ color: "var(--text-secondary)", marginBottom: "40px", fontSize: "1.1rem" }}>Experience fluid, real-time meetings.</p>
-
-        <form onSubmit={joinMeeting} style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "28px" }}>
-          <input 
-            type="text" 
-            className="glass-input" 
-            placeholder="Enter meeting code..." 
-            value={meetingCode}
-            onChange={(e) => setMeetingCode(e.target.value)}
-          />
-          <button 
-            type="submit" 
-            className="btn-primary" 
-            style={{ width: "100%", padding: "16px" }}
-            disabled={!meetingCode.trim()}
-          >
-            Join Anonymous Meeting
-          </button>
-        </form>
-
-        <div style={{ display: "flex", alignItems: "center", margin: "28px 0", color: "var(--text-secondary)" }}>
-          <div style={{ flex: 1, height: "1px", background: "var(--glass-border)" }}></div>
-          <span style={{ margin: "0 16px", fontSize: "0.875rem", fontWeight: "600", letterSpacing: "0.05em" }}>OR</span>
-          <div style={{ flex: 1, height: "1px", background: "var(--glass-border)" }}></div>
-        </div>
-
-        <button 
-          onClick={handleCreateMeeting}
-          className="btn-primary"
-          style={{ 
-            width: "100%", 
-            padding: "16px",
-            background: isHovering ? "var(--glass-bg)" : "transparent",
-            border: "1px solid var(--primary-cyan)",
-            color: "var(--primary-cyan)",
-            boxShadow: isHovering ? "0 0 20px rgba(34, 211, 238, 0.2)" : "none"
-          }}
-          onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
-        >
-          {isCheckingAuth ? "Loading..." : user ? "Create New Meeting" : "Login & Create Meeting"}
-        </button>
-
-        {user && (
-          <p style={{ marginTop: "20px", fontSize: "0.875rem", color: "var(--primary-cyan)" }}>
-            Logged in as {user.displayName}
+      <div className="landing-grid">
+        {/* Hero copy */}
+        <section className="hero">
+          <span className="hero-pill">
+            <span className="hero-dot" aria-hidden="true" />
+            Real-time meetings, reimagined
+          </span>
+          <h1 className="hero-title text-balance">
+            Fluid video calls that just <span className="hero-accent">flow</span>.
+          </h1>
+          <p className="hero-sub text-pretty">
+            Zomee makes it effortless to start or join high-quality meetings from any device. No downloads, no
+            friction, just a link and you&apos;re in.
           </p>
-        )}
+
+          <ul className="feature-list">
+            {features.map((f) => (
+              <li key={f.title} className="feature-item">
+                <span className="feature-icon" aria-hidden="true">
+                  {f.icon}
+                </span>
+                <div>
+                  <p className="feature-title">{f.title}</p>
+                  <p className="feature-desc">{f.desc}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* Action card */}
+        <section className="glass-panel action-card" aria-label="Start or join a meeting">
+          <div className="water-bubble action-bubble" aria-hidden="true">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="23 7 16 12 23 17 23 7" />
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+            </svg>
+          </div>
+
+          <h2 className="card-title">Get started</h2>
+          <p className="card-sub">Join with a code or spin up a brand-new room.</p>
+
+          <form onSubmit={joinMeeting} className="join-form">
+            <input
+              type="text"
+              className="glass-input"
+              placeholder="Enter meeting code..."
+              value={meetingCode}
+              onChange={(e) => setMeetingCode(e.target.value)}
+              aria-label="Meeting code"
+            />
+            <button type="submit" className="btn-primary btn-block" disabled={!meetingCode.trim()}>
+              Join Meeting
+            </button>
+          </form>
+
+          <div className="divider">
+            <span className="divider-line" />
+            <span className="divider-text">OR</span>
+            <span className="divider-line" />
+          </div>
+
+          <button onClick={handleCreateMeeting} className="btn-outline btn-block" disabled={isCheckingAuth}>
+            {isCheckingAuth ? "Loading..." : user ? "Create New Meeting" : "Login & Create Meeting"}
+          </button>
+
+          {user && <p className="card-user">Logged in as {user.displayName}</p>}
+        </section>
       </div>
 
-      <div style={{ position: "absolute", bottom: "20px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "24px", fontSize: "0.875rem", color: "var(--text-secondary)" }}>
-        <a href="/privacy" target="_blank" style={{ color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--primary-cyan)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Privacy Policy</a>
-        <a href="/terms" target="_blank" style={{ color: "var(--text-secondary)", textDecoration: "none", transition: "color 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.color = "var(--primary-cyan)"} onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-secondary)"}>Terms of Use</a>
-      </div>
+      <footer className="landing-footer">
+        <a href="/privacy" target="_blank" className="footer-link">
+          Privacy Policy
+        </a>
+        <span className="footer-sep" aria-hidden="true">
+          •
+        </span>
+        <a href="/terms" target="_blank" className="footer-link">
+          Terms of Use
+        </a>
+      </footer>
     </main>
   );
 }
