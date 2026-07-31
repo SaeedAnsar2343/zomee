@@ -475,10 +475,10 @@ export default function CustomRoomLayout() {
       </div>
 
       {/* Main Video Area */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", padding: "16px", overflow: "hidden" }}>
+      <div className="main-video-area" style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", padding: "16px", overflow: "hidden" }}>
         
         {/* Top Floating Timer */}
-        <div style={{ 
+        <div className="floating-timer-badge" style={{ 
           position: "absolute", top: "16px", left: "50%", transform: "translateX(-50%)", zIndex: 50, 
           background: "rgba(15, 23, 42, 0.7)", backdropFilter: "blur(16px)", padding: "6px 20px", 
           borderRadius: "100px", border: timeRemaining < 300 ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(255,255,255,0.1)", 
@@ -839,6 +839,7 @@ export default function CustomRoomLayout() {
           box-shadow: inset 0 0 20px rgba(0,0,0,0.5) !important;
         }
         
+        /* Floating Emojis */
         @keyframes floatUp {
           0% { transform: translateY(0) scale(1); opacity: 1; }
           100% { transform: translateY(-200px) scale(1.5); opacity: 0; }
@@ -849,6 +850,8 @@ export default function CustomRoomLayout() {
           font-size: 32px;
           animation: floatUp 4s ease-out forwards;
         }
+
+        /* Buttons & Popups */
         .invite-option-btn {
           background: transparent;
           border: none;
@@ -863,10 +866,7 @@ export default function CustomRoomLayout() {
         .invite-option-btn:hover {
           background: rgba(255,255,255,0.1);
         }
-        .host-action-btn {
-          background: rgba(255,0,0,0.1);
-          border: 1px solid rgba(255,0,0,0.3);
-          color: #ff6b6b;
+        .host-action-btn, .host-request-btn {
           border-radius: 6px;
           padding: 6px;
           display: flex;
@@ -874,6 +874,11 @@ export default function CustomRoomLayout() {
           justify-content: center;
           cursor: pointer;
           transition: all 0.2s;
+        }
+        .host-action-btn {
+          background: rgba(255,0,0,0.1);
+          border: 1px solid rgba(255,0,0,0.3);
+          color: #ff6b6b;
         }
         .host-action-btn:hover {
           background: rgba(255,0,0,0.3);
@@ -882,13 +887,6 @@ export default function CustomRoomLayout() {
           background: rgba(34, 211, 238, 0.1);
           border: 1px solid rgba(34, 211, 238, 0.3);
           color: var(--primary-cyan);
-          border-radius: 6px;
-          padding: 6px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: all 0.2s;
         }
         .host-request-btn:hover {
           background: rgba(34, 211, 238, 0.3);
@@ -905,6 +903,8 @@ export default function CustomRoomLayout() {
         .emoji-btn:hover {
           transform: scale(1.3);
         }
+
+        /* Animations */
         @keyframes pulseHand {
           0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
           70% { transform: scale(1.2); box-shadow: 0 0 0 20px rgba(250, 204, 21, 0); }
@@ -914,6 +914,53 @@ export default function CustomRoomLayout() {
           0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
           70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
           100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* Mobile specific overrides */
+        @media (max-width: 768px) {
+          .main-video-area {
+            padding: 4px !important;
+          }
+          .control-bar-container {
+            width: 90vw !important;
+            padding: 10px 16px !important;
+            gap: 10px !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+            justify-content: flex-start !important;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 100px !important;
+            /* Hide scrollbar for sleekness */
+            scrollbar-width: none;
+            bottom: 12px !important;
+          }
+          .control-bar-container::-webkit-scrollbar {
+            display: none;
+          }
+          .btn-glass, .lk-button {
+            min-width: 44px !important;
+            width: 44px !important;
+            height: 44px !important;
+            flex-shrink: 0 !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+          /* Fix layout for LiveKit default buttons inside */
+          .lk-control-bar {
+            display: flex !important;
+            gap: 10px !important;
+          }
+          .chat-sidebar {
+            width: 100% !important;
+          }
+          .floating-timer-badge {
+            top: 10px !important;
+            padding: 4px 12px !important;
+            font-size: 12px !important;
+          }
         }
       `}</style>
     </div>
