@@ -128,7 +128,8 @@ export default function CustomRoomLayout() {
   const { chatMessages, send: sendChatMessage } = useChat();
   const [chatInput, setChatInput] = useState("");
   const [systemMessages, setSystemMessages] = useState<{id: string, timestamp: number, message: string}[]>([]);
-  const [syncedHistory, setSyncedHistory] = useState<unknown[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [syncedHistory, setSyncedHistory] = useState<any[]>([]);
 
   const addSystemMessage = useCallback((msg: string) => {
     setSystemMessages(prev => [...prev, { id: Math.random().toString(), timestamp: Date.now(), message: msg }]);
