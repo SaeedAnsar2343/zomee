@@ -101,13 +101,13 @@ export default function CustomRoomLayout() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNoiseSuppressionEnabled, setIsNoiseSuppressionEnabled] = useState(true);
   const [isHDVideoEnabled, setIsHDVideoEnabled] = useState(true);
-  const [isMirrorVideoEnabled, setIsMirrorVideoEnabled] = useState(false);
+  const [isMirrorVideoEnabled, setIsMirrorVideoEnabled] = useState(true);
   const [isDataSaverEnabled, setIsDataSaverEnabled] = useState(false);
   const [incomingRequest, setIncomingRequest] = useState<{ hostIdentity: string, type: 'mic' | 'video' } | null>(null);
   const [showEndMeetingModal, setShowEndMeetingModal] = useState(false);
   const [showGuestLeaveModal, setShowGuestLeaveModal] = useState(false);
-  const [meetingEndedDuration, setMeetingEndedDuration] = useState("");
-  const [finalMessage, setFinalMessage] = useState("");
+  const [meetingEndedDuration, setMeetingEndedDuration] = useState<{ duration: string, hostName: string } | null>(null);
+  const [finalMessage, setFinalMessage] = useState<{ title: string, duration: string } | null>(null);
   const [meetingStartTime, setMeetingStartTime] = useState<number>(() => Date.now());
   const [timeRemaining, setTimeRemaining] = useState<number>(3600); // 60 minutes
   const [isControlBarOpen, setIsControlBarOpen] = useState(true);
@@ -141,7 +141,7 @@ export default function CustomRoomLayout() {
     if (finalMessage || meetingEndedDuration) {
       const timer = setTimeout(() => {
         router.push("/");
-      }, 7000);
+      }, 5000);
       return () => clearTimeout(timer);
     }
   }, [finalMessage, meetingEndedDuration, router]);
@@ -257,11 +257,11 @@ export default function CustomRoomLayout() {
         setRaisedHands(prev => { const n = new Set(prev); n.delete(command.identity); return n; });
         return;
       } else if (command.action === "meeting-ended") {
+        if (isHost) return;
         const duration = Math.floor((Date.now() - meetingStartTime) / 1000);
         const m = Math.floor(duration / 60);
         const s = duration % 60;
-        setMeetingEndedDuration(`${m}m ${s}s`);
-        setFinalMessage("The Host has ended the meeting.");
+        setMeetingEndedDuration({ duration: `${m}m ${s}s`, hostName: command.senderName || "The Host" });
         return;
       } else if (command.action === "sync-timer") {
         if (!isHost && command.startTime) {
@@ -312,11 +312,14 @@ export default function CustomRoomLayout() {
     const duration = Math.floor((Date.now() - meetingStartTime) / 1000);
     const m = Math.floor(duration / 60);
     const s = duration % 60;
-    setMeetingEndedDuration(`${m}m ${s}s`);
+    setFinalMessage({ title: "You ended the meeting.", duration: `${m}m ${s}s` });
     setShowEndMeetingModal(false);
     
     const encoder = new TextEncoder();
-    sendHostCommand(encoder.encode(JSON.stringify({ action: "meeting-ended" })), { reliable: true });
+    sendHostCommand(encoder.encode(JSON.stringify({ 
+      action: "meeting-ended",
+      senderName: localParticipant?.name || localParticipant?.identity
+    })), { reliable: true });
     
     setTimeout(() => {
       room.disconnect();
@@ -480,17 +483,19 @@ export default function CustomRoomLayout() {
       // Find the specific participant's video tile
       const tile = document.querySelector(`[data-lk-participant-identity="${identity}"]`) as HTMLElement;
       if (tile) {
-        tile.style.position = "relative";
+        const rect = tile.getBoundingClientRect();
         const emojiEl = document.createElement("div");
         emojiEl.innerText = emoji;
         emojiEl.className = "floating-emoji";
-        emojiEl.style.left = `${20 + Math.random() * 60}%`;
-        emojiEl.style.position = "absolute";
-        emojiEl.style.bottom = "10%";
-        emojiEl.style.zIndex = "100";
-        tile.appendChild(emojiEl);
+        // absolute position to document body to avoid overflow: hidden clipping
+        emojiEl.style.position = "fixed";
+        emojiEl.style.left = `${rect.left + (rect.width * 0.2) + Math.random() * (rect.width * 0.6)}px`;
+        emojiEl.style.bottom = `${window.innerHeight - rect.bottom + 10}px`;
+        emojiEl.style.zIndex = "9999";
+        document.body.appendChild(emojiEl);
+        
         setTimeout(() => {
-          if (tile.contains(emojiEl)) tile.removeChild(emojiEl);
+          if (document.body.contains(emojiEl)) document.body.removeChild(emojiEl);
         }, 4000);
       } else {
         triggerLocalReaction(emoji);
@@ -615,8 +620,11 @@ export default function CustomRoomLayout() {
               <button 
                 onClick={async () => {
                   setShowEndMeetingModal(false);
+                  const duration = Math.floor((Date.now() - meetingStartTime) / 1000);
+                  const m = Math.floor(duration / 60);
+                  const s = duration % 60;
+                  setFinalMessage({ title: "You left the meeting.", duration: `${m}m ${s}s` });
                   await room.disconnect();
-                  setFinalMessage("You left the meeting.");
                 }}
                 style={{ 
                   background: "rgba(255,255,255,0.1)", color: "white", border: "1px solid rgba(255,255,255,0.2)", 
@@ -668,8 +676,12 @@ export default function CustomRoomLayout() {
               <button 
                 onClick={async () => { 
                   setShowGuestLeaveModal(false); 
+                  const duration = Math.floor((Date.now() - meetingStartTime) / 1000);
+                  const m = Math.floor(duration / 60);
+                  const s = duration % 60;
+                  
+                  setFinalMessage({ title: "You left the meeting.", duration: `${m}m ${s}s` });
                   await room.disconnect(); 
-                  setFinalMessage("You left the meeting.");
                 }}
                 style={{ 
                   background: "#ef4444", color: "white", border: "none", padding: "16px", 
@@ -706,11 +718,11 @@ export default function CustomRoomLayout() {
               <LogOut size={40} color="#ef4444" />
             </div>
             <h2 style={{ fontSize: "2rem", marginBottom: "16px", color: "white" }}>Meeting Ended</h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "1.2rem", marginBottom: "16px" }}>The Host has ended this meeting.</p>
+            <p style={{ color: "var(--text-secondary)", fontSize: "1.2rem", marginBottom: "16px" }}>{meetingEndedDuration.hostName} has ended this meeting.</p>
             <div style={{ display: "inline-block", background: "rgba(255,255,255,0.1)", padding: "12px 24px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.2)", color: "var(--primary-cyan)", fontWeight: "600", fontSize: "1.2rem", marginBottom: "24px" }}>
-              Total Duration: {meetingEndedDuration}
+              Time Used: {meetingEndedDuration.duration}
             </div>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>Redirecting to home page in 7 seconds...</p>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>Redirecting to home page in 5 seconds...</p>
           </div>
         </div>
       )}
@@ -722,8 +734,11 @@ export default function CustomRoomLayout() {
             <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: "rgba(239, 68, 68, 0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
               <LogOut size={40} color="#ef4444" />
             </div>
-            <h2 style={{ fontSize: "2rem", marginBottom: "16px", color: "white" }}>{finalMessage}</h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "1.1rem" }}>Redirecting to home page in 7 seconds...</p>
+            <h2 style={{ fontSize: "2rem", marginBottom: "16px", color: "white" }}>{finalMessage.title}</h2>
+            <div style={{ display: "inline-block", background: "rgba(255,255,255,0.1)", padding: "12px 24px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.2)", color: "var(--primary-cyan)", fontWeight: "600", fontSize: "1.2rem", marginBottom: "24px" }}>
+              Time Used: {finalMessage.duration}
+            </div>
+            <p style={{ color: "var(--text-secondary)", fontSize: "1.1rem" }}>Redirecting to home page in 5 seconds...</p>
           </div>
         </div>
       )}
@@ -1012,7 +1027,7 @@ export default function CustomRoomLayout() {
           zIndex: 90, borderRadius: "100px", boxShadow: "0 10px 40px rgba(0,0,0,0.5)"
         }} className="glass-panel control-bar-container">
           
-          <ControlBar variation="minimal" controls={{ camera: true, microphone: true, screenShare: true, leave: false, chat: false }} />
+          <ControlBar variation="minimal" controls={{ camera: true, microphone: true, screenShare: false, leave: false, chat: false }} />
           
           <button onClick={handleLeaveButtonClick} className="btn-glass" style={{ background: "rgba(255, 0, 0, 0.2)", color: "#ff6b6b", height: "40px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }} title="Leave Meeting">
             <LogOut size={20} />
