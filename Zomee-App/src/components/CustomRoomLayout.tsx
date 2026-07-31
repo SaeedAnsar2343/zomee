@@ -129,6 +129,13 @@ export default function CustomRoomLayout() {
     };
   }, [resetHideTimer]);
 
+  useEffect(() => {
+    if (toastMsg) {
+      const timer = setTimeout(() => setToastMsg(""), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMsg]);
+
   const room = useRoomContext();
   const { chatMessages, send: sendChatMessage } = useChat();
   const [chatInput, setChatInput] = useState("");
@@ -468,14 +475,15 @@ export default function CustomRoomLayout() {
       {toastMsg && (
         <div style={{
           position: "absolute", top: "32px", left: "50%",
-          background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(12px)", border: "1px solid var(--primary-cyan)",
-          color: "white", padding: "12px 24px", borderRadius: "100px", zIndex: 9999,
+          background: "rgba(15, 23, 42, 0.9)", backdropFilter: "blur(16px)", border: "1px solid var(--primary-cyan)",
+          color: "white", padding: "12px 20px", borderRadius: "12px", zIndex: 9999,
           boxShadow: "0 10px 30px rgba(34, 211, 238, 0.3)", fontWeight: "500",
-          display: "flex", alignItems: "center", gap: "10px",
+          display: "flex", alignItems: "flex-start", gap: "10px",
+          width: "max-content", maxWidth: "85%",
           animation: "toastSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards"
         }}>
-          <CheckCircle2 size={18} color="#34d399" />
-          <span>{toastMsg}</span>
+          <CheckCircle2 size={18} color="#34d399" style={{ flexShrink: 0, marginTop: "2px" }} />
+          <span style={{ lineHeight: "1.4", fontSize: "14px", textAlign: "left" }}>{toastMsg}</span>
         </div>
       )}
 
@@ -501,18 +509,62 @@ export default function CustomRoomLayout() {
       {/* Host End Meeting Modal */}
       {showEndMeetingModal && (
         <div style={{
-          position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 200,
-          background: "rgba(15, 23, 42, 0.7)", backdropFilter: "blur(8px)",
-          display: "flex", alignItems: "center", justifyContent: "center"
+          position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 9999,
+          background: "rgba(15, 23, 42, 0.85)", backdropFilter: "blur(12px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          animation: "fadeIn 0.2s ease-out"
         }}>
-          <div className="glass-panel" style={{ padding: "32px", textAlign: "center", maxWidth: "400px", width: "90%", border: "1px solid var(--danger)" }}>
-            <LogOut size={48} style={{ color: "var(--danger)", marginBottom: "16px" }} />
-            <h2 style={{ marginBottom: "8px" }}>Leave Meeting</h2>
-            <p style={{ color: "var(--text-secondary)", marginBottom: "24px" }}>You are the host. Do you want to leave the meeting, or end it for everyone?</p>
+          <div className="glass-panel" style={{ 
+            padding: "32px", textAlign: "center", maxWidth: "400px", width: "90%", 
+            border: "1px solid rgba(239, 68, 68, 0.4)", borderRadius: "24px",
+            boxShadow: "0 25px 50px -12px rgba(239, 68, 68, 0.25)",
+            animation: "slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
+          }}>
+            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(239, 68, 68, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+              <LogOut size={32} style={{ color: "#ef4444" }} />
+            </div>
+            <h2 style={{ marginBottom: "12px", fontSize: "1.5rem", fontWeight: "700" }}>End Meeting</h2>
+            <p style={{ color: "var(--text-secondary)", marginBottom: "28px", fontSize: "0.95rem", lineHeight: "1.5" }}>
+              You are the host. You can leave the meeting open for others, or end it for everyone.
+            </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <button className="btn-primary" style={{ background: "var(--danger)", color: "white", border: "none" }} onClick={handleConfirmEndMeeting}>End Meeting for All</button>
-              <button className="btn-glass" onClick={() => room.disconnect()}>Just Leave</button>
-              <button className="btn-glass" style={{ border: "none", marginTop: "8px" }} onClick={() => setShowEndMeetingModal(false)}>Cancel</button>
+              <button 
+                onClick={handleConfirmEndMeeting}
+                style={{ 
+                  background: "#ef4444", color: "white", border: "none", padding: "16px", 
+                  borderRadius: "14px", fontSize: "1rem", fontWeight: "600", cursor: "pointer",
+                  transition: "background 0.2s"
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = "#dc2626"}
+                onMouseOut={(e) => e.currentTarget.style.background = "#ef4444"}
+              >
+                End Meeting for All
+              </button>
+              <button 
+                onClick={async () => {
+                  setShowEndMeetingModal(false);
+                  await room.disconnect();
+                }}
+                style={{ 
+                  background: "rgba(255,255,255,0.1)", color: "white", border: "1px solid rgba(255,255,255,0.2)", 
+                  padding: "16px", borderRadius: "14px", fontSize: "1rem", fontWeight: "600", cursor: "pointer",
+                  transition: "background 0.2s"
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+                onMouseOut={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}
+              >
+                Just Leave
+              </button>
+              <button 
+                onClick={() => setShowEndMeetingModal(false)}
+                style={{ 
+                  background: "transparent", color: "var(--text-secondary)", border: "none", 
+                  padding: "12px", borderRadius: "14px", fontSize: "0.95rem", fontWeight: "500", cursor: "pointer",
+                  marginTop: "4px"
+                }}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
@@ -520,13 +572,54 @@ export default function CustomRoomLayout() {
 
       {/* Leave Meeting Alert (Guest) */}
       {showGuestLeaveModal && (
-        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(15, 23, 42, 0.8)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(12px)" }}>
-          <div className="glass-panel" style={{ padding: "40px", textAlign: "center", maxWidth: "400px", width: "90%" }}>
-            <h2 style={{ marginBottom: "8px" }}>Leave Meeting?</h2>
-            <p style={{ color: "var(--text-secondary)", marginBottom: "24px" }}>Are you sure you want to leave this meeting?</p>
+        <div style={{
+          position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 9999,
+          background: "rgba(15, 23, 42, 0.85)", backdropFilter: "blur(12px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          animation: "fadeIn 0.2s ease-out"
+        }}>
+          <div className="glass-panel" style={{ 
+            padding: "32px", textAlign: "center", maxWidth: "400px", width: "90%", 
+            border: "1px solid rgba(239, 68, 68, 0.4)", borderRadius: "24px",
+            boxShadow: "0 25px 50px -12px rgba(239, 68, 68, 0.25)",
+            animation: "slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)"
+          }}>
+            <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(239, 68, 68, 0.15)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+              <LogOut size={32} style={{ color: "#ef4444" }} />
+            </div>
+            <h2 style={{ marginBottom: "12px", fontSize: "1.5rem", fontWeight: "700" }}>Leave Meeting?</h2>
+            <p style={{ color: "var(--text-secondary)", marginBottom: "28px", fontSize: "0.95rem", lineHeight: "1.5" }}>
+              Are you sure you want to leave this meeting?
+            </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <button className="btn-primary" style={{ background: "var(--danger)", color: "white", border: "none" }} onClick={() => { setShowGuestLeaveModal(false); room.disconnect(); router.push("/"); }}>Leave Meeting</button>
-              <button className="btn-glass" style={{ border: "none" }} onClick={() => setShowGuestLeaveModal(false)}>Cancel</button>
+              <button 
+                onClick={async () => { 
+                  setShowGuestLeaveModal(false); 
+                  await room.disconnect(); 
+                  router.push("/");
+                }}
+                style={{ 
+                  background: "#ef4444", color: "white", border: "none", padding: "16px", 
+                  borderRadius: "14px", fontSize: "1rem", fontWeight: "600", cursor: "pointer",
+                  transition: "background 0.2s"
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = "#dc2626"}
+                onMouseOut={(e) => e.currentTarget.style.background = "#ef4444"}
+              >
+                Leave Meeting
+              </button>
+              <button 
+                onClick={() => setShowGuestLeaveModal(false)}
+                style={{ 
+                  background: "rgba(255,255,255,0.1)", color: "white", border: "1px solid rgba(255,255,255,0.2)", 
+                  padding: "16px", borderRadius: "14px", fontSize: "1rem", fontWeight: "600", cursor: "pointer",
+                  transition: "background 0.2s"
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.15)"}
+                onMouseOut={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
@@ -857,16 +950,6 @@ export default function CustomRoomLayout() {
             <MonitorUp size={20} />
           </button>
 
-          <button 
-            onClick={() => setIsSettingsOpen(!isSettingsOpen)} 
-            className={`btn-glass desktop-only ${isSettingsOpen ? 'active' : ''}`} 
-            title="More Options"
-          >
-            <MoreVertical size={20} />
-          </button>
-
-          <div style={{ width: "1px", height: "32px", background: "var(--glass-border)", margin: "0 8px" }} className="divider-desktop-only"></div>
-          
           <Recorder />
 
         </div>
@@ -1161,6 +1244,14 @@ export default function CustomRoomLayout() {
         @keyframes toastSlideDown {
           from { transform: translate(-50%, -30px); opacity: 0; }
           to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
         
         ${isMirrorVideoEnabled ? '' : `
