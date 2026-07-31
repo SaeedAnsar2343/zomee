@@ -107,6 +107,7 @@ export default function CustomRoomLayout() {
   const [showEndMeetingModal, setShowEndMeetingModal] = useState(false);
   const [showGuestLeaveModal, setShowGuestLeaveModal] = useState(false);
   const [meetingEndedDuration, setMeetingEndedDuration] = useState("");
+  const [finalMessage, setFinalMessage] = useState("");
   const [meetingStartTime, setMeetingStartTime] = useState<number>(() => Date.now());
   const [timeRemaining, setTimeRemaining] = useState<number>(3600); // 60 minutes
   const [isControlBarOpen, setIsControlBarOpen] = useState(true);
@@ -135,6 +136,15 @@ export default function CustomRoomLayout() {
       return () => clearTimeout(timer);
     }
   }, [toastMsg]);
+
+  useEffect(() => {
+    if (finalMessage || meetingEndedDuration) {
+      const timer = setTimeout(() => {
+        router.push("/");
+      }, 7000);
+      return () => clearTimeout(timer);
+    }
+  }, [finalMessage, meetingEndedDuration, router]);
 
   // Apply Hardware Constraints when UI toggles change
   useEffect(() => {
@@ -253,10 +263,7 @@ export default function CustomRoomLayout() {
         const m = Math.floor(duration / 60);
         const s = duration % 60;
         setMeetingEndedDuration(`${m}m ${s}s`);
-        setTimeout(() => {
-          room.disconnect();
-          router.push("/");
-        }, 4000);
+        setFinalMessage("The Host has ended the meeting.");
         return;
       } else if (command.action === "sync-timer") {
         if (!isHost && command.startTime) {
@@ -315,8 +322,7 @@ export default function CustomRoomLayout() {
     
     setTimeout(() => {
       room.disconnect();
-      router.push("/");
-    }, 4000);
+    }, 100);
   };
 
   const executeHostCommand = (targetIdentity: string | null, action: string, type?: string) => {
@@ -612,6 +618,7 @@ export default function CustomRoomLayout() {
                 onClick={async () => {
                   setShowEndMeetingModal(false);
                   await room.disconnect();
+                  setFinalMessage("You left the meeting.");
                 }}
                 style={{ 
                   background: "rgba(255,255,255,0.1)", color: "white", border: "1px solid rgba(255,255,255,0.2)", 
@@ -664,7 +671,7 @@ export default function CustomRoomLayout() {
                 onClick={async () => { 
                   setShowGuestLeaveModal(false); 
                   await room.disconnect(); 
-                  router.push("/");
+                  setFinalMessage("You left the meeting.");
                 }}
                 style={{ 
                   background: "#ef4444", color: "white", border: "none", padding: "16px", 
@@ -695,16 +702,30 @@ export default function CustomRoomLayout() {
 
       {/* Meeting Ended Alert (Guest) */}
       {meetingEndedDuration && (
-        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(15, 23, 42, 0.95)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(20px)" }}>
-          <div style={{ textAlign: "center" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(15, 23, 42, 0.95)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(20px)" }}>
+          <div style={{ textAlign: "center", animation: "slideUp 0.3s ease-out" }}>
             <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: "rgba(239, 68, 68, 0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
               <LogOut size={40} color="#ef4444" />
             </div>
             <h2 style={{ fontSize: "2rem", marginBottom: "16px", color: "white" }}>Meeting Ended</h2>
             <p style={{ color: "var(--text-secondary)", fontSize: "1.2rem", marginBottom: "16px" }}>The Host has ended this meeting.</p>
-            <div style={{ display: "inline-block", background: "rgba(255,255,255,0.1)", padding: "12px 24px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.2)", color: "var(--primary-cyan)", fontWeight: "600", fontSize: "1.2rem" }}>
+            <div style={{ display: "inline-block", background: "rgba(255,255,255,0.1)", padding: "12px 24px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.2)", color: "var(--primary-cyan)", fontWeight: "600", fontSize: "1.2rem", marginBottom: "24px" }}>
               Total Duration: {meetingEndedDuration}
             </div>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>Redirecting to home page in 7 seconds...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Final Departure Alert */}
+      {finalMessage && (
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(15, 23, 42, 0.95)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(20px)" }}>
+          <div style={{ textAlign: "center", animation: "slideUp 0.3s ease-out" }}>
+            <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: "rgba(239, 68, 68, 0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+              <LogOut size={40} color="#ef4444" />
+            </div>
+            <h2 style={{ fontSize: "2rem", marginBottom: "16px", color: "white" }}>{finalMessage}</h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "1.1rem" }}>Redirecting to home page in 7 seconds...</p>
           </div>
         </div>
       )}
@@ -912,16 +933,14 @@ export default function CustomRoomLayout() {
                   </button>
                 </div>
                 
-                <button 
+                <a 
                   className="invite-option-btn" 
-                  onClick={() => {
-                    setToastMsg("System diagnostics sent successfully.");
-                    setIsSettingsOpen(false);
-                  }} 
-                  style={{ marginTop: "4px", color: "var(--text-secondary)" }}
+                  href="mailto:ms7017320@gmail.com?subject=Zomee%20Issue%20Report"
+                  onClick={() => setIsSettingsOpen(false)} 
+                  style={{ marginTop: "4px", color: "var(--text-secondary)", textDecoration: "none", display: "block" }}
                 >
                   Report an Issue
-                </button>
+                </a>
                 
                 <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.1)", textAlign: "center" }}>
                   <span style={{ background: "rgba(255,255,255,0.1)", padding: "6px 14px", borderRadius: "100px", fontSize: "11px", color: "var(--text-secondary)", fontWeight: "600", display: "inline-block" }}>
