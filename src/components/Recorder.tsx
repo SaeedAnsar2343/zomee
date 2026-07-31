@@ -71,14 +71,15 @@ export default function Recorder() {
   return (
     <button 
       onClick={isRecording ? stopRecording : startRecording}
-      className={`btn-glass ${isRecording ? 'btn-danger' : ''}`}
+      className={`ctrl-btn ${isRecording ? 'danger ctrl-pill' : ''}`}
       title={isRecording ? "Stop Recording" : "Record Screen"}
+      aria-label={isRecording ? "Stop recording" : "Record screen"}
       style={{
         animation: isRecording ? "pulse 2s infinite" : "none",
       }}
     >
       {isRecording ? <StopCircle size={20} /> : <Video size={20} />}
-      {isRecording && <span style={{ marginLeft: "8px", fontSize: "14px" }}>REC</span>}
+      {isRecording && <span style={{ fontSize: "13px", fontWeight: 700 }}>REC</span>}
       <style jsx>{`
         @keyframes pulse {
           0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
