@@ -5,7 +5,7 @@ import { Track, RoomEvent, ConnectionQuality, Participant } from "livekit-client
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Recorder from "./Recorder";
-import { MessageSquare, X, Users, Link as LinkIcon, Smile, MicOff, VideoOff, MessageSquareOff, Hand, Mic, Video, LogOut } from "lucide-react";
+import { MessageSquare, X, Users, Link as LinkIcon, Smile, MicOff, VideoOff, MessageSquareOff, Hand, Mic, Video, LogOut, FlipHorizontal } from "lucide-react";
 
 const HandOverlay = ({ participant, trackRef, raisedHands }: { participant?: any, trackRef?: any, raisedHands: Set<string> }) => {
   // trackRef can contain participant either directly or inside trackRef.participant
@@ -37,6 +37,44 @@ export default function CustomRoomLayout() {
     [{ source: Track.Source.ScreenShare, withPlaceholder: false }],
     { onlySubscribed: false }
   );
+
+  const [currentPage, setCurrentPage] = useState(0);
+  const [shuffledTracks, setShuffledTracks] = useState<any[]>([]);
+
+  useEffect(() => {
+    const updateShuffled = () => {
+      const isTrackHost = (trackRef: any) => {
+        try {
+           return JSON.parse(trackRef.participant?.metadata || "{}").isHost;
+        } catch { return false; }
+      };
+
+      const hostTracks = cameraTracks.filter(isTrackHost);
+      const guestTracks = cameraTracks.filter((t) => !isTrackHost(t));
+      
+      for (let i = guestTracks.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [guestTracks[i], guestTracks[j]] = [guestTracks[j], guestTracks[i]];
+      }
+
+      setShuffledTracks([...hostTracks, ...guestTracks]);
+    };
+
+    updateShuffled();
+    const intervalId = setInterval(updateShuffled, 60000);
+    return () => clearInterval(intervalId);
+  }, [cameraTracks]);
+
+  const ITEMS_PER_PAGE = 4;
+  const totalPages = Math.ceil(shuffledTracks.length / ITEMS_PER_PAGE);
+  const paginatedTracks = shuffledTracks.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
+
+  // Ensure current page is valid if participants leave
+  useEffect(() => {
+    if (currentPage >= totalPages && totalPages > 0) {
+      setCurrentPage(totalPages - 1);
+    }
+  }, [totalPages, currentPage]);
 
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
@@ -107,6 +145,30 @@ export default function CustomRoomLayout() {
   }, [sidebarTab, combinedMessages.length]);
 
   const unreadCount = sidebarTab === "chat" ? 0 : Math.max(0, combinedMessages.length - lastReadCount);
+
+  // Camera Switcher Logic
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
+
+  useEffect(() => {
+    const getDevices = async () => {
+      try {
+        const devices = await room.getLocalDevices('videoinput');
+        setVideoDevices(devices);
+      } catch (e) {
+        console.error("Error fetching video devices", e);
+      }
+    };
+    getDevices();
+  }, [room]);
+
+  const switchCamera = async () => {
+    if (videoDevices.length > 1) {
+      const nextIndex = (currentCameraIndex + 1) % videoDevices.length;
+      setCurrentCameraIndex(nextIndex);
+      await room.switchActiveDevice('videoinput', videoDevices[nextIndex].deviceId);
+    }
+  };
 
   // Timer logic & Persistence
   useEffect(() => {
@@ -507,15 +569,24 @@ export default function CustomRoomLayout() {
                 border: "1px solid var(--glass-border)", boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
                 padding: "8px", overflowY: "auto", zIndex: 20
               }}>
-                <GridLayout tracks={cameraTracks} style={{ width: "100%", height: `${Math.max(200, cameraTracks.length * 150)}px` }}>
+                <GridLayout tracks={paginatedTracks} style={{ width: "100%", height: `${Math.max(200, paginatedTracks.length * 150)}px` }}>
                   <CustomGridTile raisedHands={raisedHands} />
                 </GridLayout>
               </div>
             </div>
           ) : (
-            <GridLayout tracks={cameraTracks} style={{ height: "100%", width: "100%" }}>
+            <GridLayout tracks={paginatedTracks} style={{ height: "100%", width: "100%" }}>
               <CustomGridTile raisedHands={raisedHands} />
             </GridLayout>
+          )}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div style={{ position: "absolute", bottom: "100px", left: "50%", transform: "translateX(-50%)", zIndex: 60, display: "flex", gap: "16px", background: "rgba(15, 23, 42, 0.7)", padding: "8px 16px", borderRadius: "100px", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <button onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0} className="btn-glass" style={{ opacity: currentPage === 0 ? 0.5 : 1, padding: "6px 12px", minWidth: "auto", height: "auto" }}>Prev</button>
+              <span style={{ color: "white", alignSelf: "center", fontWeight: "bold", fontSize: "14px" }}>{currentPage + 1} / {totalPages}</span>
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} disabled={currentPage === totalPages - 1} className="btn-glass" style={{ opacity: currentPage === totalPages - 1 ? 0.5 : 1, padding: "6px 12px", minWidth: "auto", height: "auto" }}>Next</button>
+            </div>
           )}
         </div>
 
@@ -539,12 +610,18 @@ export default function CustomRoomLayout() {
             <LogOut size={20} />
           </button>
           
-          <div style={{ width: "1px", height: "32px", background: "var(--glass-border)", margin: "0 8px" }}></div>
+          {videoDevices.length > 1 && (
+            <button onClick={switchCamera} className="btn-glass mobile-only-btn" title="Switch Camera">
+              <FlipHorizontal size={20} />
+            </button>
+          )}
+
+          <div style={{ width: "1px", height: "32px", background: "var(--glass-border)", margin: "0 8px" }} className="divider-desktop-only"></div>
           
           <Recorder />
 
           {/* Invite Menu */}
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative" }} className="btn-invite">
             <button 
               onClick={() => setIsInviteMenuOpen(!isInviteMenuOpen)} 
               className={`btn-glass ${isInviteMenuOpen ? 'active' : ''}`} 
@@ -568,7 +645,7 @@ export default function CustomRoomLayout() {
           </div>
 
           {/* Emoji Menu */}
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative" }} className="btn-emoji">
             <button 
               onClick={() => setIsEmojiMenuOpen(!isEmojiMenuOpen)} 
               className={`btn-glass ${isEmojiMenuOpen ? 'active' : ''}`} 
@@ -596,7 +673,7 @@ export default function CustomRoomLayout() {
           
           <button 
             onClick={toggleHand} 
-            className={`btn-glass ${localParticipant && raisedHands.has(localParticipant.identity) ? 'active' : ''}`} 
+            className={`btn-glass btn-hand ${localParticipant && raisedHands.has(localParticipant.identity) ? 'active' : ''}`} 
             title="Raise Hand"
             style={{ background: localParticipant && raisedHands.has(localParticipant.identity) ? "rgba(250, 204, 21, 0.2)" : "", color: localParticipant && raisedHands.has(localParticipant.identity) ? "#facc15" : "" }}
           >
@@ -605,7 +682,7 @@ export default function CustomRoomLayout() {
           
           <button 
             onClick={() => setSidebarTab(sidebarTab === "participants" ? null : "participants")}
-            className={`btn-glass ${sidebarTab === "participants" ? 'active' : ''}`}
+            className={`btn-glass btn-participants ${sidebarTab === "participants" ? 'active' : ''}`}
             title="Participants"
             style={{ background: sidebarTab === "participants" ? "var(--primary-cyan)" : "" }}
           >
@@ -615,7 +692,7 @@ export default function CustomRoomLayout() {
 
           <button 
             onClick={() => setSidebarTab(sidebarTab === "chat" ? null : "chat")}
-            className={`btn-glass ${sidebarTab === "chat" ? 'active' : ''}`}
+            className={`btn-glass btn-chat ${sidebarTab === "chat" ? 'active' : ''}`}
             title="Toggle Chat"
             style={{ position: "relative", background: sidebarTab === "chat" ? "var(--primary-cyan)" : "" }}
           >
@@ -651,7 +728,7 @@ export default function CustomRoomLayout() {
               <X size={20} />
             </button>
           </div>
-          <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
             {sidebarTab === "chat" ? (
               <>
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "16px", position: "relative", gap: "12px", overflowY: "auto" }}>
@@ -917,8 +994,39 @@ export default function CustomRoomLayout() {
           100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
+        /* Desktop only elements */
+        .mobile-only-btn {
+          display: none !important;
+        }
+
         /* Mobile specific overrides */
         @media (max-width: 768px) {
+          .mobile-only-btn {
+            display: flex !important;
+          }
+          .divider-desktop-only {
+            display: none !important;
+          }
+          
+          /* Floating buttons positioned around the screen */
+          .btn-participants { position: fixed !important; top: 16px !important; left: 16px !important; z-index: 80 !important; }
+          .btn-invite { position: fixed !important; top: 70px !important; left: 16px !important; z-index: 80 !important; }
+          .btn-chat { position: fixed !important; top: 16px !important; right: 16px !important; z-index: 80 !important; }
+          .btn-emoji { position: fixed !important; top: 70px !important; right: 16px !important; z-index: 80 !important; }
+          .btn-hand { position: fixed !important; top: 124px !important; right: 16px !important; z-index: 80 !important; }
+
+          /* Adjust Invite/Emoji Dropdown positions for mobile fixed buttons */
+          .btn-invite > div, .btn-emoji > div {
+            bottom: auto !important;
+            top: 50px !important;
+            left: 0 !important;
+            transform: none !important;
+          }
+          .btn-emoji > div {
+            left: auto !important;
+            right: 0 !important;
+          }
+
           .main-video-area {
             padding: 4px !important;
           }
