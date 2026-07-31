@@ -136,6 +136,45 @@ export default function CustomRoomLayout() {
     }
   }, [toastMsg]);
 
+  // Apply Hardware Constraints when UI toggles change
+  useEffect(() => {
+    try {
+      const trackPub = localParticipant?.getTrackPublication(Track.Source.Microphone);
+      if (trackPub && trackPub.track) {
+        // @ts-expect-error - LiveKit internal type missing mediaStreamTrack
+        const mediaStreamTrack = trackPub.track.mediaStreamTrack;
+        if (mediaStreamTrack) {
+          mediaStreamTrack.applyConstraints({
+            echoCancellation: isNoiseSuppressionEnabled,
+            noiseSuppression: isNoiseSuppressionEnabled,
+            autoGainControl: isNoiseSuppressionEnabled
+          }).catch(() => {});
+        }
+      }
+    } catch (e) {}
+  }, [isNoiseSuppressionEnabled, localParticipant]);
+
+  useEffect(() => {
+    try {
+      const trackPub = localParticipant?.getTrackPublication(Track.Source.Camera);
+      if (trackPub && trackPub.track) {
+        // @ts-expect-error - LiveKit internal type missing mediaStreamTrack
+        const mediaStreamTrack = trackPub.track.mediaStreamTrack;
+        if (mediaStreamTrack) {
+          if (isDataSaverEnabled) {
+            mediaStreamTrack.applyConstraints({ frameRate: { ideal: 15 }, width: { ideal: 480 }, height: { ideal: 360 } }).catch(() => {});
+          } else {
+            mediaStreamTrack.applyConstraints({
+              width: isHDVideoEnabled ? { ideal: 1280 } : { ideal: 640 },
+              height: isHDVideoEnabled ? { ideal: 720 } : { ideal: 480 },
+              frameRate: isHDVideoEnabled ? { ideal: 30 } : { ideal: 24 }
+            }).catch(() => {});
+          }
+        }
+      }
+    } catch (e) {}
+  }, [isHDVideoEnabled, isDataSaverEnabled, localParticipant]);
+
   const room = useRoomContext();
   const { chatMessages, send: sendChatMessage } = useChat();
   const [chatInput, setChatInput] = useState("");
@@ -432,16 +471,45 @@ export default function CustomRoomLayout() {
     }, 4000);
   }, []);
 
+  const triggerReactionForParticipant = useCallback((identity: string, emoji: string) => {
+    try {
+      // Find the specific participant's video tile
+      const tile = document.querySelector(`[data-lk-participant-identity="${identity}"]`) as HTMLElement;
+      if (tile) {
+        tile.style.position = "relative";
+        const emojiEl = document.createElement("div");
+        emojiEl.innerText = emoji;
+        emojiEl.className = "floating-emoji";
+        emojiEl.style.left = `${20 + Math.random() * 60}%`;
+        emojiEl.style.position = "absolute";
+        emojiEl.style.bottom = "10%";
+        emojiEl.style.zIndex = "100";
+        tile.appendChild(emojiEl);
+        setTimeout(() => {
+          if (tile.contains(emojiEl)) tile.removeChild(emojiEl);
+        }, 4000);
+      } else {
+        triggerLocalReaction(emoji);
+      }
+    } catch (e) {
+      triggerLocalReaction(emoji);
+    }
+  }, [triggerLocalReaction]);
+
   const { send } = useDataChannel("reactions", (msg) => {
     const decoder = new TextDecoder();
     const emoji = decoder.decode(msg.payload);
-    triggerLocalReaction(emoji);
+    if (msg.from?.identity) {
+      triggerReactionForParticipant(msg.from.identity, emoji);
+    } else {
+      triggerLocalReaction(emoji);
+    }
   });
 
   const COMMON_EMOJIS = ["👍", "👏", "😂", "🎉", "💖"];
 
   const handleReaction = (emoji: string) => {
-    triggerLocalReaction(emoji);
+    if (localParticipant) triggerReactionForParticipant(localParticipant.identity, emoji);
     const encoder = new TextEncoder();
     send(encoder.encode(emoji), { reliable: true });
     setIsEmojiMenuOpen(false);
