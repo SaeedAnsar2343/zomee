@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { LiveKitRoom } from "@livekit/components-react";
+import { VideoPresets } from "livekit-client";
 import "@livekit/components-styles";
 import CustomRoomLayout from "@/components/CustomRoomLayout";
 import { Copy, Check } from "lucide-react";

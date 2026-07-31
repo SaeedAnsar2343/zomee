@@ -1,22 +1,46 @@
 "use client";
 
-import { useTracks, GridLayout, ParticipantTile, RoomAudioRenderer, ControlBar, Chat, useParticipants, useDataChannel, useLocalParticipant, useRoomContext } from "@livekit/components-react";
-import { Track, RoomEvent } from "livekit-client";
-import { useState, useCallback, useEffect } from "react";
+import { useTracks, GridLayout, ParticipantTile, RoomAudioRenderer, ControlBar, useParticipants, useDataChannel, useLocalParticipant, useRoomContext, useChat } from "@livekit/components-react";
+import { Track, RoomEvent, ConnectionQuality, Participant } from "livekit-client";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Recorder from "./Recorder";
 import { MessageSquare, X, Users, Link as LinkIcon, Smile, MicOff, VideoOff, MessageSquareOff, Hand, Mic, Video, LogOut } from "lucide-react";
 
+const HandOverlay = ({ participant, trackRef, raisedHands }: { participant?: any, trackRef?: any, raisedHands: Set<string> }) => {
+  // trackRef can contain participant either directly or inside trackRef.participant
+  const p = participant || trackRef?.participant;
+  if (!p || !raisedHands.has(p.identity)) return null;
+  return (
+    <div style={{ position: "absolute", top: "16px", right: "16px", zIndex: 9999, background: "rgba(250, 204, 21, 0.2)", padding: "12px", borderRadius: "50%", border: "2px solid rgba(250, 204, 21, 0.5)", boxShadow: "0 0 20px rgba(250, 204, 21, 0.6)", animation: "pulseHand 1.5s infinite" }}>
+      <Hand size={32} color="#facc15" />
+    </div>
+  );
+};
+
+const CustomGridTile = ({ trackRef, raisedHands, ...props }: any) => {
+  return (
+    <div {...props} style={{ ...props.style, position: "relative", borderRadius: "16px", overflow: "hidden" }}>
+      <ParticipantTile trackRef={trackRef} style={{ width: "100%", height: "100%", position: "absolute", top: 0, left: 0 }} />
+      <HandOverlay participant={trackRef?.participant} trackRef={trackRef} raisedHands={raisedHands} />
+    </div>
+  );
+};
+
 export default function CustomRoomLayout() {
-  const tracks = useTracks(
-    [
-      { source: Track.Source.Camera, withPlaceholder: true },
-      { source: Track.Source.ScreenShare, withPlaceholder: false },
-    ],
+  const cameraTracks = useTracks(
+    [{ source: Track.Source.Camera, withPlaceholder: true }],
+    { onlySubscribed: false }
+  );
+
+  const screenShareTracks = useTracks(
+    [{ source: Track.Source.ScreenShare, withPlaceholder: false }],
     { onlySubscribed: false }
   );
 
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
+  const router = useRouter();
   
   // Parse isHost from metadata
   const isHost = localParticipant?.metadata ? (() => {
@@ -27,24 +51,136 @@ export default function CustomRoomLayout() {
   const [toastMsg, setToastMsg] = useState("");
   const [floatingEmojis, setFloatingEmojis] = useState<{ id: number, emoji: string, left: number }[]>([]);
   const [isInviteMenuOpen, setIsInviteMenuOpen] = useState(false);
+  const [isEmojiMenuOpen, setIsEmojiMenuOpen] = useState(false);
   const [isChatMuted, setIsChatMuted] = useState(false);
   const [raisedHands, setRaisedHands] = useState<Set<string>>(new Set());
+  const [mutedChats, setMutedChats] = useState<Set<string>>(new Set());
   const [incomingRequest, setIncomingRequest] = useState<{ hostIdentity: string, type: 'mic' | 'video' } | null>(null);
   const [showEndMeetingModal, setShowEndMeetingModal] = useState(false);
-  const [meetingEndedMessage, setMeetingEndedMessage] = useState("");
-  const room = useRoomContext();
+  const [showGuestLeaveModal, setShowGuestLeaveModal] = useState(false);
+  const [meetingEndedDuration, setMeetingEndedDuration] = useState("");
+  const [meetingStartTime, setMeetingStartTime] = useState<number>(Date.now());
+  const [timeRemaining, setTimeRemaining] = useState<number>(3600); // 60 minutes
+  const [isControlBarOpen, setIsControlBarOpen] = useState(true);
+  const [lastReadCount, setLastReadCount] = useState(0);
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Listen for participant departures
+  const resetHideTimer = useCallback(() => {
+    setIsControlBarOpen(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => {
+      setIsControlBarOpen(false);
+    }, 3000);
+  }, []);
+
   useEffect(() => {
+    resetHideTimer();
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [resetHideTimer]);
+
+  const room = useRoomContext();
+  const { chatMessages, send: sendChatMessage } = useChat();
+  const [chatInput, setChatInput] = useState("");
+  const [systemMessages, setSystemMessages] = useState<{id: string, timestamp: number, message: string}[]>([]);
+  const [syncedHistory, setSyncedHistory] = useState<any[]>([]);
+
+  const addSystemMessage = useCallback((msg: string) => {
+    setSystemMessages(prev => [...prev, { id: Math.random().toString(), timestamp: Date.now(), message: msg }]);
+  }, []);
+
+  const allMessages = [
+    ...syncedHistory,
+    ...chatMessages.map(m => ({ id: m.id, timestamp: m.timestamp, message: m.message, sender: m.from?.name || m.from?.identity, isSystem: false, isSelf: m.from?.identity === localParticipant?.identity })),
+    ...systemMessages.map(m => ({ ...m, isSystem: true, isSelf: false, sender: "System" }))
+  ];
+
+  // Deduplicate by ID and sort
+  const combinedMessages = Array.from(new Map(allMessages.map(m => [m.id, m])).values())
+    .sort((a, b) => a.timestamp - b.timestamp);
+
+  useEffect(() => {
+    if (sidebarTab === "chat") {
+      setLastReadCount(combinedMessages.length);
+    }
+  }, [sidebarTab, combinedMessages.length]);
+
+  const unreadCount = sidebarTab === "chat" ? 0 : Math.max(0, combinedMessages.length - lastReadCount);
+
+  // Timer logic & Persistence
+  useEffect(() => {
+    if (isHost && typeof window !== "undefined") {
+      const roomId = window.location.pathname.split('/').pop();
+      if (roomId) {
+        const storedTime = localStorage.getItem(`zomee_start_${roomId}`);
+        if (storedTime) {
+          setMeetingStartTime(parseInt(storedTime, 10));
+        } else {
+          localStorage.setItem(`zomee_start_${roomId}`, meetingStartTime.toString());
+        }
+      }
+    }
+  }, [isHost]); // Run once when host status is determined
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const remaining = 3600 - Math.floor((Date.now() - meetingStartTime) / 1000);
+      if (remaining <= 0) {
+        setTimeRemaining(0);
+        if (isHost) handleConfirmEndMeeting();
+      } else {
+        setTimeRemaining(remaining);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [meetingStartTime, isHost]);
+
+  // Listen for participant departures, arrivals, and network quality
+  useEffect(() => {
+    const handleParticipantConnected = (participant: any) => {
+      addSystemMessage(`${participant.name || participant.identity} joined the meeting.`);
+      if (isHost) {
+        const encoder = new TextEncoder();
+        sendHostCommand(encoder.encode(JSON.stringify({ 
+          action: "sync-timer", 
+          startTime: meetingStartTime 
+        })), { reliable: true });
+
+        // Send full chat history to the new joiner
+        sendHostCommand(encoder.encode(JSON.stringify({
+          action: "sync-history",
+          target: participant.identity,
+          history: combinedMessages
+        })), { reliable: true });
+      }
+    };
     const handleParticipantDisconnected = (participant: any) => {
+      addSystemMessage(`${participant.name || participant.identity} left the meeting.`);
       if (isHost) {
         setToastMsg(`${participant.name || participant.identity} left the meeting.`);
         setTimeout(() => setToastMsg(""), 4000);
       }
     };
+    const handleConnectionQuality = (quality: ConnectionQuality, participant: Participant) => {
+      if (participant.identity === localParticipant?.identity) {
+        if (quality === ConnectionQuality.Poor || quality === ConnectionQuality.Lost) {
+          setToastMsg("⚠️ Weak network signal detected. Video quality may drop.");
+          setTimeout(() => setToastMsg(""), 5000);
+        }
+      }
+    };
+
+    room.on(RoomEvent.ParticipantConnected, handleParticipantConnected);
     room.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
-    return () => { room.off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected); };
-  }, [room, isHost]);
+    room.on(RoomEvent.ConnectionQualityChanged, handleConnectionQuality);
+
+    return () => { 
+      room.off(RoomEvent.ParticipantConnected, handleParticipantConnected);
+      room.off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected); 
+      room.off(RoomEvent.ConnectionQualityChanged, handleConnectionQuality);
+    };
+  }, [room, isHost, localParticipant, addSystemMessage]);
 
   // Data channel for Host Commands
   const { send: sendHostCommand } = useDataChannel("host-commands", (msg) => {
@@ -55,17 +191,30 @@ export default function CustomRoomLayout() {
       // Global commands
       if (command.action === "raise-hand") {
         setRaisedHands(prev => { const n = new Set(prev); n.add(command.identity); return n; });
+        addSystemMessage(`${command.senderName || command.identity} raised their hand! ✋`);
+        if (isHost && command.identity !== localParticipant?.identity) {
+          setToastMsg(`${command.senderName || command.identity} raised their hand! ✋`);
+          setTimeout(() => setToastMsg(""), 4000);
+        }
         return;
       }
       if (command.action === "lower-hand") {
         setRaisedHands(prev => { const n = new Set(prev); n.delete(command.identity); return n; });
         return;
-      }
-      if (command.action === "end-meeting") {
-        setMeetingEndedMessage("This meeting was disbanded by the host.");
+      } else if (command.action === "meeting-ended") {
+        const duration = Math.floor((Date.now() - meetingStartTime) / 1000);
+        const m = Math.floor(duration / 60);
+        const s = duration % 60;
+        setMeetingEndedDuration(`${m}m ${s}s`);
         setTimeout(() => {
           room.disconnect();
-        }, 3000);
+          router.push("/");
+        }, 4000);
+        return;
+      } else if (command.action === "sync-timer") {
+        if (!isHost && command.startTime) {
+          setMeetingStartTime(command.startTime);
+        }
         return;
       }
 
@@ -83,6 +232,10 @@ export default function CustomRoomLayout() {
           setIsChatMuted(true);
           setToastMsg("The Host has disabled your chat.");
           setTimeout(() => setToastMsg(""), 4000);
+        } else if (command.action === "unmute-chat") {
+          setIsChatMuted(false);
+          setToastMsg("The Host has enabled your chat.");
+          setTimeout(() => setToastMsg(""), 4000);
         } else if (command.action === "request-unmute-mic") {
           setIncomingRequest({ hostIdentity: command.sender, type: 'mic' });
         } else if (command.action === "request-unmute-video") {
@@ -90,6 +243,12 @@ export default function CustomRoomLayout() {
         } else if (command.action === "request-rejected") {
           setToastMsg(`Participant declined your ${command.type} request.`);
           setTimeout(() => setToastMsg(""), 4000);
+        } else if (command.action === "sync-history" && command.history) {
+          // New joiner receives history from Host
+          setSyncedHistory(prev => {
+            const merged = [...prev, ...command.history];
+            return Array.from(new Map(merged.map(m => [m.id, m])).values());
+          });
         }
       }
     } catch (e) {
@@ -97,10 +256,27 @@ export default function CustomRoomLayout() {
     }
   });
 
+  const handleConfirmEndMeeting = () => {
+    const duration = Math.floor((Date.now() - meetingStartTime) / 1000);
+    const m = Math.floor(duration / 60);
+    const s = duration % 60;
+    setMeetingEndedDuration(`${m}m ${s}s`);
+    setShowEndMeetingModal(false);
+    
+    const encoder = new TextEncoder();
+    sendHostCommand(encoder.encode(JSON.stringify({ action: "meeting-ended" })), { reliable: true });
+    
+    setTimeout(() => {
+      room.disconnect();
+      router.push("/");
+    }, 4000);
+  };
+
   const executeHostCommand = (targetIdentity: string | null, action: string, type?: string) => {
     const encoder = new TextEncoder();
     sendHostCommand(encoder.encode(JSON.stringify({ 
       sender: localParticipant?.identity, 
+      senderName: localParticipant?.name || localParticipant?.identity,
       identity: localParticipant?.identity, 
       target: targetIdentity, 
       action, 
@@ -142,18 +318,23 @@ export default function CustomRoomLayout() {
     setIncomingRequest(null);
   };
 
+  const toggleChatMute = (participantId: string) => {
+    const isMuted = mutedChats.has(participantId);
+    executeHostCommand(participantId, isMuted ? "unmute-chat" : "mute-chat");
+    setMutedChats(prev => {
+      const next = new Set(prev);
+      if (isMuted) next.delete(participantId);
+      else next.add(participantId);
+      return next;
+    });
+  };
+
   const handleLeaveButtonClick = () => {
     if (isHost) {
       setShowEndMeetingModal(true);
     } else {
-      room.disconnect();
+      setShowGuestLeaveModal(true);
     }
-  };
-
-  const endMeetingForAll = () => {
-    executeHostCommand(null, "end-meeting");
-    setShowEndMeetingModal(false);
-    room.disconnect();
   };
 
   const { send } = useDataChannel("reactions", (msg) => {
@@ -170,10 +351,13 @@ export default function CustomRoomLayout() {
     }, 4000);
   }, []);
 
+  const COMMON_EMOJIS = ["👍", "👏", "😂", "🎉", "💖"];
+
   const handleReaction = (emoji: string) => {
     triggerLocalReaction(emoji);
     const encoder = new TextEncoder();
     send(encoder.encode(emoji), { reliable: true });
+    setIsEmojiMenuOpen(false);
   };
 
   const copyInviteLink = () => {
@@ -193,11 +377,12 @@ export default function CustomRoomLayout() {
     setTimeout(() => setToastMsg(""), 3000);
   };
 
-  const screenShareTracks = tracks.filter((t) => t.source === Track.Source.ScreenShare);
-  const cameraTracks = tracks.filter((t) => t.source === Track.Source.Camera);
 
   return (
-    <div style={{ display: "flex", height: "100vh", width: "100vw", overflow: "hidden", position: "relative" }}>
+    <div 
+      onMouseMove={resetHideTimer}
+      style={{ display: "flex", height: "100vh", width: "100vw", overflow: "hidden", position: "relative" }}
+    >
       
       {/* Toast */}
       {toastMsg && (
@@ -242,7 +427,7 @@ export default function CustomRoomLayout() {
             <h2 style={{ marginBottom: "8px" }}>Leave Meeting</h2>
             <p style={{ color: "var(--text-secondary)", marginBottom: "24px" }}>You are the host. Do you want to leave the meeting, or end it for everyone?</p>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <button className="btn-primary" style={{ background: "var(--danger)", color: "white", border: "none" }} onClick={endMeetingForAll}>End Meeting for All</button>
+              <button className="btn-primary" style={{ background: "var(--danger)", color: "white", border: "none" }} onClick={handleConfirmEndMeeting}>End Meeting for All</button>
               <button className="btn-glass" onClick={() => room.disconnect()}>Just Leave</button>
               <button className="btn-glass" style={{ border: "none", marginTop: "8px" }} onClick={() => setShowEndMeetingModal(false)}>Cancel</button>
             </div>
@@ -250,17 +435,32 @@ export default function CustomRoomLayout() {
         </div>
       )}
 
+      {/* Leave Meeting Alert (Guest) */}
+      {showGuestLeaveModal && (
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(15, 23, 42, 0.8)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(12px)" }}>
+          <div className="glass-panel" style={{ padding: "40px", textAlign: "center", maxWidth: "400px" }}>
+            <h2 style={{ marginBottom: "8px" }}>Leave Meeting?</h2>
+            <p style={{ color: "var(--text-secondary)", marginBottom: "24px" }}>Are you sure you want to leave this meeting?</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <button className="btn-primary" style={{ background: "var(--danger)", color: "white", border: "none" }} onClick={() => { setShowGuestLeaveModal(false); room.disconnect(); router.push("/"); }}>Leave Meeting</button>
+              <button className="btn-glass" style={{ border: "none" }} onClick={() => setShowGuestLeaveModal(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Meeting Ended Alert (Guest) */}
-      {meetingEndedMessage && (
-        <div style={{
-          position: "absolute", top: 0, left: 0, width: "100%", height: "100%", zIndex: 300,
-          background: "rgba(15, 23, 42, 0.9)", backdropFilter: "blur(12px)",
-          display: "flex", alignItems: "center", justifyContent: "center"
-        }}>
-          <div className="glass-panel" style={{ padding: "40px", textAlign: "center" }}>
-            <LogOut size={64} style={{ color: "var(--primary-cyan)", marginBottom: "16px" }} />
-            <h1 style={{ marginBottom: "8px" }}>Meeting Ended</h1>
-            <p style={{ color: "var(--text-secondary)", fontSize: "1.1rem" }}>{meetingEndedMessage}</p>
+      {meetingEndedDuration && (
+        <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(15, 23, 42, 0.95)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(20px)" }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ width: "80px", height: "80px", borderRadius: "50%", background: "rgba(239, 68, 68, 0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px" }}>
+              <LogOut size={40} color="#ef4444" />
+            </div>
+            <h2 style={{ fontSize: "2rem", marginBottom: "16px", color: "white" }}>Meeting Ended</h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "1.2rem", marginBottom: "16px" }}>The Host has ended this meeting.</p>
+            <div style={{ display: "inline-block", background: "rgba(255,255,255,0.1)", padding: "12px 24px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.2)", color: "var(--primary-cyan)", fontWeight: "600", fontSize: "1.2rem" }}>
+              Total Duration: {meetingEndedDuration}
+            </div>
           </div>
         </div>
       )}
@@ -277,13 +477,27 @@ export default function CustomRoomLayout() {
       {/* Main Video Area */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", padding: "16px", overflow: "hidden" }}>
         
+        {/* Top Floating Timer */}
+        <div style={{ 
+          position: "absolute", top: "16px", left: "50%", transform: "translateX(-50%)", zIndex: 50, 
+          background: "rgba(15, 23, 42, 0.7)", backdropFilter: "blur(16px)", padding: "6px 20px", 
+          borderRadius: "100px", border: timeRemaining < 300 ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(255,255,255,0.1)", 
+          color: timeRemaining < 300 ? "#ef4444" : "white", fontWeight: "600", fontSize: "14px",
+          boxShadow: timeRemaining < 300 ? "0 0 20px rgba(239, 68, 68, 0.3)" : "0 4px 20px rgba(0,0,0,0.3)",
+          display: "flex", alignItems: "center", gap: "8px",
+          animation: timeRemaining < 300 ? "pulseError 2s infinite" : "none"
+        }}>
+          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: timeRemaining < 300 ? "#ef4444" : "#22c55e", boxShadow: timeRemaining < 300 ? "0 0 10px #ef4444" : "0 0 10px #22c55e" }}></div>
+          {Math.floor(timeRemaining / 60).toString().padStart(2, '0')}:{ (timeRemaining % 60).toString().padStart(2, '0') }
+        </div>
+
         {/* Video Area (Grid or PiP) */}
         <div style={{ flex: 1, borderRadius: "24px", overflow: "hidden", position: "relative", background: "black" }} className="glass-panel">
           {screenShareTracks.length > 0 ? (
             <div style={{ width: "100%", height: "100%", position: "relative" }}>
               {/* Screen Share Background */}
               <div style={{ width: "100%", height: "100%" }}>
-                <ParticipantTile trackRef={screenShareTracks[0]} />
+                <CustomGridTile trackRef={screenShareTracks[0]} raisedHands={raisedHands} style={{ width: "100%", height: "100%" }} />
               </div>
               
               {/* Floating Camera PiP Overlay */}
@@ -294,20 +508,29 @@ export default function CustomRoomLayout() {
                 padding: "8px", overflowY: "auto", zIndex: 20
               }}>
                 <GridLayout tracks={cameraTracks} style={{ width: "100%", height: `${Math.max(200, cameraTracks.length * 150)}px` }}>
-                  <ParticipantTile />
+                  <CustomGridTile raisedHands={raisedHands} />
                 </GridLayout>
               </div>
             </div>
           ) : (
             <GridLayout tracks={cameraTracks} style={{ height: "100%", width: "100%" }}>
-              <ParticipantTile />
+              <CustomGridTile raisedHands={raisedHands} />
             </GridLayout>
           )}
         </div>
 
         {/* Custom Control Bar */}
-        <div style={{ 
-          marginTop: "16px", padding: "16px", display: "flex", justifyContent: "center", alignItems: "center", gap: "16px" 
+        <div 
+          onMouseEnter={() => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current); setIsControlBarOpen(true); }}
+          onMouseLeave={resetHideTimer}
+          style={{ 
+          position: "absolute", bottom: "24px", left: "50%",
+          transform: `translateX(-50%) translateY(${isControlBarOpen ? "0px" : "120px"})`,
+          opacity: isControlBarOpen ? 1 : 0,
+          pointerEvents: isControlBarOpen ? "auto" : "none",
+          transition: "transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease",
+          padding: "16px 24px", display: "flex", justifyContent: "center", alignItems: "center", gap: "16px",
+          zIndex: 90, borderRadius: "100px", boxShadow: "0 10px 40px rgba(0,0,0,0.5)"
         }} className="glass-panel control-bar-container">
           
           <ControlBar variation="minimal" controls={{ camera: true, microphone: true, screenShare: true, leave: false, chat: false }} />
@@ -344,9 +567,32 @@ export default function CustomRoomLayout() {
             )}
           </div>
 
-          <button onClick={() => handleReaction("💖")} className="btn-glass" title="Send Heart">
-            <Smile size={20} />
-          </button>
+          {/* Emoji Menu */}
+          <div style={{ position: "relative" }}>
+            <button 
+              onClick={() => setIsEmojiMenuOpen(!isEmojiMenuOpen)} 
+              className={`btn-glass ${isEmojiMenuOpen ? 'active' : ''}`} 
+              title="React"
+            >
+              <Smile size={20} />
+            </button>
+            
+            {isEmojiMenuOpen && (
+              <div style={{
+                position: "absolute", bottom: "60px", left: "50%", transform: "translateX(-50%)",
+                background: "var(--glass-bg)", backdropFilter: "blur(20px)",
+                border: "1px solid var(--glass-border)", borderRadius: "12px",
+                padding: "8px", display: "flex", gap: "8px",
+                zIndex: 100, boxShadow: "0 10px 40px rgba(0,0,0,0.5)"
+              }}>
+                {COMMON_EMOJIS.map(emoji => (
+                  <button key={emoji} onClick={() => handleReaction(emoji)} className="emoji-btn">
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           
           <button 
             onClick={toggleHand} 
@@ -371,9 +617,14 @@ export default function CustomRoomLayout() {
             onClick={() => setSidebarTab(sidebarTab === "chat" ? null : "chat")}
             className={`btn-glass ${sidebarTab === "chat" ? 'active' : ''}`}
             title="Toggle Chat"
-            style={{ background: sidebarTab === "chat" ? "var(--primary-cyan)" : "" }}
+            style={{ position: "relative", background: sidebarTab === "chat" ? "var(--primary-cyan)" : "" }}
           >
             <MessageSquare size={20} />
+            {unreadCount > 0 && (
+              <span style={{ position: "absolute", top: "-4px", right: "-4px", background: "var(--danger)", color: "white", fontSize: "10px", fontWeight: "bold", padding: "2px 6px", borderRadius: "100px", border: "2px solid var(--glass-bg)" }}>
+                {unreadCount}
+              </span>
+            )}
           </button>
 
         </div>
@@ -402,19 +653,71 @@ export default function CustomRoomLayout() {
           <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
             {sidebarTab === "chat" ? (
               <>
-                {isChatMuted && (
-                  <div style={{
-                    position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-                    background: "rgba(15, 23, 42, 0.9)", backdropFilter: "blur(4px)", zIndex: 50,
-                    display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column",
-                    padding: "24px", textAlign: "center"
-                  }}>
-                    <MessageSquareOff size={48} style={{ color: "var(--danger)", marginBottom: "16px" }} />
-                    <h4 style={{ margin: 0, marginBottom: "8px" }}>Chat Disabled</h4>
-                    <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>The host has disabled your ability to send messages.</p>
-                  </div>
-                )}
-                <Chat />
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "16px", position: "relative", gap: "12px", overflowY: "auto" }}>
+                  {isChatMuted && !isHost ? (
+                    <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(15, 23, 42, 0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, backdropFilter: "blur(4px)" }}>
+                      <div style={{ textAlign: "center", color: "var(--text-secondary)" }}>
+                        <MessageSquareOff size={32} style={{ margin: "0 auto 8px", opacity: 0.5 }} />
+                        <p>Chat disabled by Host</p>
+                      </div>
+                    </div>
+                  ) : null}
+                  
+                  {combinedMessages.length === 0 && <div style={{ color: "var(--text-secondary)", textAlign: "center", marginTop: "auto", marginBottom: "auto" }}>No messages yet.</div>}
+                  
+                  {combinedMessages.map(msg => {
+                    const timeString = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    return (
+                      <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: msg.isSystem ? "center" : (msg.isSelf ? "flex-end" : "flex-start"), marginBottom: "4px" }}>
+                        {msg.isSystem ? (
+                          <div style={{ background: "rgba(255,255,255,0.1)", padding: "6px 14px", borderRadius: "100px", fontSize: "11px", color: "var(--primary-cyan)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                            {msg.message}
+                          </div>
+                        ) : (
+                          <div style={{ display: "flex", gap: "8px", flexDirection: msg.isSelf ? "row-reverse" : "row", alignItems: "flex-end", maxWidth: "90%" }}>
+                            {/* Avatar */}
+                            {!msg.isSelf && (
+                              <div style={{ width: "28px", height: "28px", borderRadius: "50%", background: "var(--primary-cyan)", color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold", flexShrink: 0 }}>
+                                {msg.sender ? msg.sender[0].toUpperCase() : "?"}
+                              </div>
+                            )}
+                            
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: msg.isSelf ? "flex-end" : "flex-start" }}>
+                              {/* Sender Name & Time */}
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px", padding: "0 4px" }}>
+                                <span style={{ fontSize: "11px", color: "var(--text-secondary)", fontWeight: "600" }}>{msg.isSelf ? "You" : msg.sender}</span>
+                                <span style={{ fontSize: "9px", color: "rgba(255,255,255,0.3)" }}>{timeString}</span>
+                              </div>
+                              
+                              {/* Message Bubble */}
+                              <div style={{ 
+                                background: msg.isSelf ? "linear-gradient(135deg, var(--primary-cyan), #0ea5e9)" : "rgba(255,255,255,0.08)", 
+                                color: msg.isSelf ? "#000" : "#fff", 
+                                padding: "10px 14px", 
+                                borderRadius: "16px", 
+                                borderBottomRightRadius: msg.isSelf ? "4px" : "16px", 
+                                borderBottomLeftRadius: msg.isSelf ? "16px" : "4px", 
+                                fontSize: "13px",
+                                lineHeight: "1.4",
+                                wordWrap: "break-word",
+                                boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
+                                border: msg.isSelf ? "none" : "1px solid rgba(255,255,255,0.1)"
+                              }}>
+                                {msg.message}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ padding: "16px", borderTop: "1px solid var(--glass-border)" }}>
+                  <form onSubmit={(e) => { e.preventDefault(); if (chatInput.trim()) { sendChatMessage(chatInput.trim()); setChatInput(""); } }} style={{ display: "flex", gap: "8px" }}>
+                    <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Type a message..." style={{ flex: 1, background: "rgba(0,0,0,0.3)", border: "1px solid var(--glass-border)", padding: "10px", borderRadius: "8px", color: "white", outline: "none" }} disabled={isChatMuted && !isHost} />
+                    <button type="submit" className="btn-primary" style={{ padding: "10px 16px" }} disabled={(isChatMuted && !isHost) || !chatInput.trim()}>Send</button>
+                  </form>
+                </div>
               </>
             ) : (
               <div style={{ padding: "16px", overflowY: "auto", height: "100%" }}>
@@ -431,7 +734,11 @@ export default function CustomRoomLayout() {
                           {(() => {
                             try { return JSON.parse(p.metadata || "{}").isHost ? " 👑" : ""; } catch { return ""; }
                           })()}
-                          {raisedHands.has(p.identity) && <Hand size={14} color="#facc15" />}
+                          {raisedHands.has(p.identity) && (
+                            <div style={{ background: "rgba(250, 204, 21, 0.2)", padding: "4px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(250, 204, 21, 0.5)", boxShadow: "0 0 10px rgba(250, 204, 21, 0.3)", marginLeft: "4px" }}>
+                              <Hand size={14} color="#facc15" />
+                            </div>
+                          )}
                         </div>
                         <div style={{ fontSize: "12px", color: p.isMicrophoneEnabled ? "var(--primary-cyan)" : "var(--danger)" }}>
                           {p.isMicrophoneEnabled ? "Mic On" : "Muted"}
@@ -462,9 +769,15 @@ export default function CustomRoomLayout() {
                           </button>
                         )}
                         
-                        <button onClick={() => executeHostCommand(p.identity, "mute-chat")} className="host-action-btn" title="Disable Chat">
-                          <MessageSquareOff size={14} />
-                        </button>
+                        {mutedChats.has(p.identity) ? (
+                          <button onClick={() => toggleChatMute(p.identity)} className="host-request-btn" title="Enable Chat" style={{ color: "#22c55e", borderColor: "rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.1)" }}>
+                            <MessageSquare size={14} />
+                          </button>
+                        ) : (
+                          <button onClick={() => toggleChatMute(p.identity)} className="host-action-btn" title="Disable Chat">
+                            <MessageSquareOff size={14} />
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -496,7 +809,12 @@ export default function CustomRoomLayout() {
           background: rgba(255,255,255,0.15) !important;
           transform: scale(1.05);
         }
-        .lk-button[aria-pressed="true"] {
+        .lk-button[data-lk-source="camera"][aria-pressed="false"],
+        .lk-button[data-lk-source="microphone"][aria-pressed="false"] {
+          background: var(--danger) !important;
+          border-color: rgba(255,0,0,0.5) !important;
+        }
+        .lk-disconnect-button {
           background: var(--danger) !important;
         }
         .lk-chat {
@@ -575,6 +893,27 @@ export default function CustomRoomLayout() {
         .host-request-btn:hover {
           background: rgba(34, 211, 238, 0.3);
           box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
+        }
+        .emoji-btn {
+          background: transparent;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          transition: transform 0.2s;
+          padding: 4px;
+        }
+        .emoji-btn:hover {
+          transform: scale(1.3);
+        }
+        @keyframes pulseHand {
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
+          70% { transform: scale(1.2); box-shadow: 0 0 0 20px rgba(250, 204, 21, 0); }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+        }
+        @keyframes pulseError {
+          0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+          70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
       `}</style>
     </div>
