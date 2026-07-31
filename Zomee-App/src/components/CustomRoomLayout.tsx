@@ -151,7 +151,6 @@ export default function CustomRoomLayout() {
     try {
       const trackPub = localParticipant?.getTrackPublication(Track.Source.Microphone);
       if (trackPub && trackPub.track) {
-        // @ts-expect-error - LiveKit internal type missing mediaStreamTrack
         const mediaStreamTrack = trackPub.track.mediaStreamTrack;
         if (mediaStreamTrack) {
           mediaStreamTrack.applyConstraints({
@@ -168,7 +167,6 @@ export default function CustomRoomLayout() {
     try {
       const trackPub = localParticipant?.getTrackPublication(Track.Source.Camera);
       if (trackPub && trackPub.track) {
-        // @ts-expect-error - LiveKit internal type missing mediaStreamTrack
         const mediaStreamTrack = trackPub.track.mediaStreamTrack;
         if (mediaStreamTrack) {
           if (isDataSaverEnabled) {
