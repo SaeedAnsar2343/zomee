@@ -164,8 +164,6 @@ export default function RoomPage() {
       data-lk-theme="default"
       style={{ height: "100vh", display: "flex", flexDirection: "column" }}
       onDisconnected={() => router.push("/")}
-      videoCaptureDefaults={{ resolution: VideoPresets.h1080.resolution }}
-      screenShareDefaults={{ resolution: VideoPresets.h1080.resolution }}
     >
       <CustomRoomLayout />
     </LiveKitRoom>
