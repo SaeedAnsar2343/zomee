@@ -5,7 +5,7 @@ import { Track, RoomEvent, ConnectionQuality, Participant, Room } from "livekit-
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Recorder from "./Recorder";
-import { MessageSquare, X, Users, Link as LinkIcon, Smile, MicOff, VideoOff, MessageSquareOff, Hand, Mic, Video, LogOut, FlipHorizontal, MonitorUp } from "lucide-react";
+import { MessageSquare, X, Users, Link as LinkIcon, Smile, MicOff, VideoOff, MessageSquareOff, Hand, Mic, Video, LogOut, FlipHorizontal, MonitorUp, MoreVertical, ShieldCheck, CheckCircle2 } from "lucide-react";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const HandOverlay = ({ participant, trackRef, raisedHands }: { participant?: any, trackRef?: any, raisedHands: Set<string> }) => {
@@ -98,6 +98,8 @@ export default function CustomRoomLayout() {
   const [isChatMuted, setIsChatMuted] = useState(false);
   const [raisedHands, setRaisedHands] = useState<Set<string>>(new Set());
   const [mutedChats, setMutedChats] = useState<Set<string>>(new Set());
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isNoiseSuppressionEnabled, setIsNoiseSuppressionEnabled] = useState(true);
   const [incomingRequest, setIncomingRequest] = useState<{ hostIdentity: string, type: 'mic' | 'video' } | null>(null);
   const [showEndMeetingModal, setShowEndMeetingModal] = useState(false);
   const [showGuestLeaveModal, setShowGuestLeaveModal] = useState(false);
@@ -652,11 +654,69 @@ export default function CustomRoomLayout() {
             </button>
           )}
 
+          {/* Settings Menu (3-dots) */}
+          <div style={{ position: "absolute", top: "16px", right: "16px", zIndex: 80 }}>
+            <button 
+              onClick={() => setIsSettingsOpen(!isSettingsOpen)} 
+              className={`btn-glass ${isSettingsOpen ? 'active' : ''}`} 
+              title="More Options"
+            >
+              <MoreVertical size={20} />
+            </button>
+            
+            {isSettingsOpen && (
+              <div style={{
+                position: "absolute", top: "0px", right: "56px",
+                background: "var(--glass-bg)", backdropFilter: "blur(24px)",
+                border: "1px solid var(--glass-border)", borderRadius: "16px",
+                padding: "16px", display: "flex", flexDirection: "column", gap: "12px",
+                minWidth: "240px", zIndex: 100, boxShadow: "0 10px 40px rgba(0,0,0,0.5)"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: "12px", marginBottom: "4px" }}>
+                  <ShieldCheck size={18} color="#34d399" />
+                  <span style={{ color: "#34d399", fontSize: "13px", fontWeight: "600" }}>End-to-End Encrypted</span>
+                </div>
+                
+                <h4 style={{ fontSize: "12px", textTransform: "uppercase", color: "var(--text-secondary)", letterSpacing: "1px", margin: "4px 0" }}>Audio Settings</h4>
+                
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0" }}>
+                  <span style={{ fontSize: "14px", color: "white", fontWeight: "500" }}>Noise Suppression</span>
+                  <button 
+                    onClick={() => {
+                      setIsNoiseSuppressionEnabled(!isNoiseSuppressionEnabled);
+                      setToastMsg(isNoiseSuppressionEnabled ? "Noise suppression disabled" : "Noise suppression enabled");
+                    }}
+                    style={{
+                      width: "44px", height: "24px", borderRadius: "100px", background: isNoiseSuppressionEnabled ? "var(--primary-cyan)" : "rgba(255,255,255,0.2)",
+                      position: "relative", border: "none", cursor: "pointer", transition: "all 0.3s"
+                    }}
+                  >
+                    <div style={{
+                      width: "18px", height: "18px", borderRadius: "50%", background: "white", position: "absolute", top: "3px",
+                      left: isNoiseSuppressionEnabled ? "23px" : "3px", transition: "all 0.3s",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+                    }}></div>
+                  </button>
+                </div>
+
+                <button className="invite-option-btn" onClick={() => setToastMsg("More features coming soon!")} style={{ marginTop: "4px" }}>
+                  More Features...
+                </button>
+                
+                <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.1)", textAlign: "center" }}>
+                  <span style={{ background: "rgba(255,255,255,0.1)", padding: "6px 14px", borderRadius: "100px", fontSize: "11px", color: "var(--text-secondary)", fontWeight: "600", display: "inline-block" }}>
+                    App Version 1.0.0
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button 
             onClick={() => setSidebarTab(sidebarTab === "chat" ? null : "chat")}
             className={`btn-glass ${sidebarTab === "chat" ? 'active' : ''}`}
             title="Toggle Chat"
-            style={{ position: "absolute", top: "16px", right: "16px", zIndex: 80, background: sidebarTab === "chat" ? "var(--primary-cyan)" : "" }}
+            style={{ position: "absolute", top: "70px", right: "16px", zIndex: 80, background: sidebarTab === "chat" ? "var(--primary-cyan)" : "" }}
           >
             <MessageSquare size={20} />
             {unreadCount > 0 && (
@@ -666,7 +726,7 @@ export default function CustomRoomLayout() {
             )}
           </button>
 
-          <div style={{ position: "absolute", top: "70px", right: "16px", zIndex: 80 }}>
+          <div style={{ position: "absolute", top: "124px", right: "16px", zIndex: 80 }}>
             <button 
               onClick={() => setIsEmojiMenuOpen(!isEmojiMenuOpen)} 
               className={`btn-glass ${isEmojiMenuOpen ? 'active' : ''}`} 
@@ -676,7 +736,7 @@ export default function CustomRoomLayout() {
             </button>
             {isEmojiMenuOpen && (
               <div style={{
-                position: "absolute", top: "0px", right: "50px",
+                position: "absolute", top: "0px", right: "56px",
                 background: "var(--glass-bg)", backdropFilter: "blur(20px)",
                 border: "1px solid var(--glass-border)", borderRadius: "12px",
                 padding: "8px", display: "flex", gap: "8px", flexDirection: "row", flexWrap: "wrap", width: "140px",
@@ -695,7 +755,7 @@ export default function CustomRoomLayout() {
             onClick={toggleHand} 
             className={`btn-glass ${localParticipant && raisedHands.has(localParticipant.identity) ? 'active' : ''}`} 
             title="Raise Hand"
-            style={{ position: "absolute", top: "124px", right: "16px", zIndex: 80, background: localParticipant && raisedHands.has(localParticipant.identity) ? "rgba(250, 204, 21, 0.2)" : "", color: localParticipant && raisedHands.has(localParticipant.identity) ? "#facc15" : "" }}
+            style={{ position: "absolute", top: "178px", right: "16px", zIndex: 80, background: localParticipant && raisedHands.has(localParticipant.identity) ? "rgba(250, 204, 21, 0.2)" : "", color: localParticipant && raisedHands.has(localParticipant.identity) ? "#facc15" : "" }}
           >
             <Hand size={20} />
           </button>

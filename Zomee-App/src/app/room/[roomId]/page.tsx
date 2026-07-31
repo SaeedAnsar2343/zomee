@@ -158,11 +158,22 @@ export default function RoomPage() {
   return (
     <LiveKitRoom
       video={true}
-      audio={true}
+      audio={{
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      }}
+      options={{
+        audioCaptureDefaults: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        }
+      }}
       token={token}
       serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
       data-lk-theme="default"
-      style={{ height: "100vh", display: "flex", flexDirection: "column" }}
+      style={{ height: "100dvh", position: "fixed", top: 0, left: 0, right: 0, bottom: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}
       onDisconnected={() => router.push("/")}
     >
       <CustomRoomLayout />
