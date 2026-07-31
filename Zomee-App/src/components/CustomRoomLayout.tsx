@@ -632,16 +632,17 @@ export default function CustomRoomLayout() {
 
       {/* Sidebar */}
       <div 
-        className="chat-sidebar"
+        className={`chat-sidebar ${sidebarTab ? 'open' : ''}`}
         style={{ 
         width: sidebarTab ? "320px" : "0px", 
-        transition: "width 0.3s ease, right 0.3s ease", 
+        transition: "width 0.3s ease, transform 0.3s ease", 
         overflow: "hidden",
         borderLeft: sidebarTab ? "1px solid var(--glass-border)" : "none",
         background: "rgba(15, 23, 42, 0.6)",
-        backdropFilter: "blur(16px)"
+        backdropFilter: "blur(16px)",
+        zIndex: 100
       }}>
-        <div style={{ width: "320px", height: "100%", display: "flex", flexDirection: "column" }}>
+        <div className="sidebar-inner" style={{ width: "320px", height: "100%", display: "flex", flexDirection: "column" }}>
           <div style={{ padding: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--glass-border)" }}>
             <h3 style={{ margin: 0, fontWeight: "600" }}>
               {sidebarTab === "chat" ? "Meeting Chat" : "Participants"}
@@ -922,21 +923,14 @@ export default function CustomRoomLayout() {
             padding: 4px !important;
           }
           .control-bar-container {
-            width: 90vw !important;
-            padding: 10px 16px !important;
-            gap: 10px !important;
-            flex-wrap: nowrap !important;
-            overflow-x: auto !important;
-            overflow-y: hidden !important;
-            justify-content: flex-start !important;
-            -webkit-overflow-scrolling: touch;
-            border-radius: 100px !important;
-            /* Hide scrollbar for sleekness */
-            scrollbar-width: none;
-            bottom: 12px !important;
-          }
-          .control-bar-container::-webkit-scrollbar {
-            display: none;
+            width: 95vw !important;
+            padding: 12px 16px !important;
+            gap: 12px !important;
+            flex-wrap: wrap !important;
+            overflow: visible !important;
+            justify-content: center !important;
+            border-radius: 24px !important;
+            bottom: 16px !important;
           }
           .btn-glass, .lk-button {
             min-width: 44px !important;
@@ -953,7 +947,25 @@ export default function CustomRoomLayout() {
             display: flex !important;
             gap: 10px !important;
           }
+          /* Hide dropdown menus on mobile to save space */
+          .lk-button-group-menu {
+            display: none !important;
+          }
           .chat-sidebar {
+            position: absolute !important;
+            right: 0 !important;
+            top: 0 !important;
+            height: 100% !important;
+            width: 100% !important;
+            z-index: 300 !important;
+            transform: translateX(100%);
+            transition: transform 0.3s ease !important;
+            background: rgba(15, 23, 42, 0.95) !important;
+          }
+          .chat-sidebar.open {
+            transform: translateX(0);
+          }
+          .sidebar-inner {
             width: 100% !important;
           }
           .floating-timer-badge {
