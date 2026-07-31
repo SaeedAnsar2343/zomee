@@ -5,7 +5,7 @@ import { Track, RoomEvent, ConnectionQuality, Participant, Room } from "livekit-
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Recorder from "./Recorder";
-import { MessageSquare, X, Users, Link as LinkIcon, Smile, MicOff, VideoOff, MessageSquareOff, Hand, Mic, Video, LogOut, FlipHorizontal } from "lucide-react";
+import { MessageSquare, X, Users, Link as LinkIcon, Smile, MicOff, VideoOff, MessageSquareOff, Hand, Mic, Video, LogOut, FlipHorizontal, MonitorUp } from "lucide-react";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const HandOverlay = ({ participant, trackRef, raisedHands }: { participant?: any, trackRef?: any, raisedHands: Set<string> }) => {
@@ -603,8 +603,12 @@ export default function CustomRoomLayout() {
           )}
         </div>
 
-        {/* Side Controls (Always visible, floating on sides) */}
-        <div className="side-controls">
+        {/* Side Controls (Always visible, floating on sides, fades with control bar) */}
+        <div className="side-controls" style={{ 
+          opacity: isControlBarOpen ? 1 : 0, 
+          pointerEvents: isControlBarOpen ? "auto" : "none", 
+          transition: "opacity 0.3s ease" 
+        }}>
           <button 
             onClick={() => setSidebarTab(sidebarTab === "participants" ? null : "participants")}
             className={`btn-glass ${sidebarTab === "participants" ? 'active' : ''}`}
@@ -636,6 +640,17 @@ export default function CustomRoomLayout() {
               </div>
             )}
           </div>
+
+          {videoDevices.length > 1 && (
+            <button 
+              onClick={switchCamera} 
+              className="btn-glass mobile-only-btn" 
+              title="Switch Camera"
+              style={{ position: "absolute", top: "124px", left: "16px", zIndex: 80 }}
+            >
+              <FlipHorizontal size={20} />
+            </button>
+          )}
 
           <button 
             onClick={() => setSidebarTab(sidebarTab === "chat" ? null : "chat")}
@@ -706,11 +721,22 @@ export default function CustomRoomLayout() {
             <LogOut size={20} />
           </button>
           
-          {videoDevices.length > 1 && (
-            <button onClick={switchCamera} className="btn-glass mobile-only-btn" title="Switch Camera">
-              <FlipHorizontal size={20} />
-            </button>
-          )}
+          <button 
+            onClick={async () => {
+              try {
+                if (localParticipant) {
+                  await localParticipant.setScreenShareEnabled(!localParticipant.isScreenShareEnabled);
+                }
+              } catch (e) {
+                setToastMsg("Screen sharing not supported on this browser.");
+              }
+            }}
+            className={`btn-glass ${localParticipant?.isScreenShareEnabled ? 'active' : ''}`}
+            title="Toggle Screen Share"
+            style={{ background: localParticipant?.isScreenShareEnabled ? "var(--primary-cyan)" : "" }}
+          >
+            <MonitorUp size={20} />
+          </button>
 
           <div style={{ width: "1px", height: "32px", background: "var(--glass-border)", margin: "0 8px" }} className="divider-desktop-only"></div>
           

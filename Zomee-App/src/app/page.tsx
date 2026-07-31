@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Video, Zap, Globe2, Lock, ArrowRight, Video as VideoIcon } from 'lucide-react';
+import { Zap, Globe2, Lock, ArrowRight, Aperture } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -81,7 +81,7 @@ export default function Home() {
             <div className="logo-pulse-container" style={{ marginBottom: "28px" }}>
               <div className="logo-glow"></div>
               <div className="logo-icon-wrapper">
-                <VideoIcon size={44} style={{ color: "white" }} />
+                <Aperture size={44} style={{ color: "white" }} />
               </div>
             </div>
             
@@ -104,7 +104,7 @@ export default function Home() {
           <div className="logo-pulse-container" style={{ margin: "0 auto 32px" }}>
             <div className="logo-glow"></div>
             <div className="logo-icon-wrapper">
-              <VideoIcon size={40} style={{ color: "white" }} />
+              <Aperture size={40} style={{ color: "white" }} />
             </div>
           </div>
 

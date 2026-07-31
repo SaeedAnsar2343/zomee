@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Video, StopCircle } from "lucide-react";
+import { Circle, Square } from "lucide-react";
 
 export default function Recorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -77,7 +77,7 @@ export default function Recorder() {
         animation: isRecording ? "pulse 2s infinite" : "none",
       }}
     >
-      {isRecording ? <StopCircle size={20} /> : <Video size={20} />}
+      {isRecording ? <Square size={20} fill="currentColor" /> : <Circle size={20} />}
       {isRecording && <span style={{ marginLeft: "8px", fontSize: "14px" }}>REC</span>}
       <style jsx>{`
         @keyframes pulse {
