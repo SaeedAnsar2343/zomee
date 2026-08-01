@@ -25,6 +25,11 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
+      - name: Create Web Dir
+        run: |
+          mkdir -p capacitor-web-dir
+          echo "<html><body>Capacitor Web View</body></html>" > capacitor-web-dir/index.html
+
       - name: Sync Capacitor
         run: npx cap sync android
 
