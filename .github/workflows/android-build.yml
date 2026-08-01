@@ -25,9 +25,13 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
+      - name: Sync Capacitor
+        run: npx cap sync android
+
       - name: Build Android APK
         run: |
           cd android
+          sed -i 's/\r$//' gradlew
           chmod +x ./gradlew
           ./gradlew assembleDebug
 
