@@ -33,15 +33,40 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Build Android APK
+      - name: Build Android APK and AAB
         run: |
           cd android
           sed -i 's/\r$//' gradlew
           chmod +x ./gradlew
           ./gradlew assembleDebug
+          ./gradlew bundleRelease
+
+      - name: Generate Keystore & Sign AAB
+        run: |
+          if [ ! -f "android/app/zomee-key.jks" ]; then
+            echo "Keystore not found! Generating a new one..."
+            keytool -genkey -v -keystore android/app/zomee-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias zomee -dname "CN=Zomee, OU=Zomee, O=Zomee, L=Dubai, S=Dubai, C=AE" -storepass "zomee12345" -keypass "zomee12345"
+          else
+            echo "Keystore found! Using existing keystore..."
+          fi
+          
+          # Sign the AAB file
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore android/app/zomee-key.jks -storepass "zomee12345" -keypass "zomee12345" android/app/build/outputs/bundle/release/app-release.aab zomee
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-debug.apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload SIGNED AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-SIGNED.aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Upload Keystore (CRITICAL - KEEP SAFE)
+        uses: actions/upload-artifact@v4
+        with:
+          name: YOUR-KEYSTORE-FILE.jks
+          path: android/app/zomee-key.jks
