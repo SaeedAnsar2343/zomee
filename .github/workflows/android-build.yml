@@ -30,7 +30,7 @@ jobs:
           mkdir -p www
           echo "<html><body>Loading Zomee...</body></html>" > www/index.html
           rm -f capacitor.config.ts capacitor.config.js
-          echo '{"appId":"com.zomee.app","appName":"Zomee","webDir":"www","server":{"url":"https://zomee.vercel.app","cleartext":true}}' > capacitor.config.json
+          echo '{"appId":"com.zomee.app","appName":"Zomee","webDir":"www","server":{"url":"https://zomee.vercel.app","cleartext":true},"plugins":{"SplashScreen":{"launchShowDuration":3000,"launchAutoHide":true,"backgroundColor":"#121212","androidSplashResourceName":"splash","androidScaleType":"CENTER_CROP","showSpinner":false,"splashFullScreen":true,"splashImmersive":true}}}' > capacitor.config.json
 
       - name: Sync Capacitor
         run: npx cap sync android
