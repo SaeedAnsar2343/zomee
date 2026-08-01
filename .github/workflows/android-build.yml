@@ -27,9 +27,8 @@ jobs:
 
       - name: Create Web Dir & Config
         run: |
-          mkdir -p capacitor-web-dir
-          echo "<html><body>Capacitor Web View</body></html>" > capacitor-web-dir/index.html
-          echo '{"appId":"com.zomee.app","appName":"Zomee","webDir":"capacitor-web-dir","server":{"url":"https://zomee.vercel.app","cleartext":true}}' > capacitor.config.json
+          mkdir -p www
+          echo "<html><body>Capacitor Web View</body></html>" > www/index.html
 
       - name: Sync Capacitor
         run: npx cap sync android
