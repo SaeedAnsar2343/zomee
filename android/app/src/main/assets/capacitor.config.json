@@ -1,7 +1,7 @@
 {
 	"appId": "com.zomee.app",
 	"appName": "Zomee",
-	"webDir": "capacitor-web-dir",
+	"webDir": "www",
 	"server": {
 		"url": "https://zomee.vercel.app",
 		"cleartext": true

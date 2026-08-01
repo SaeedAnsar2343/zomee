@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
     "@capacitor/ios": "^8.5.0",
+    "@capacitor/splash-screen": "^8.0.2",
     "@livekit/components-react": "^2.9.23",
     "@livekit/components-styles": "^1.2.0",
     "@types/uuid": "^10.0.0",
